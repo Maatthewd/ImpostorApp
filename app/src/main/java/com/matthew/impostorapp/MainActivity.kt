@@ -24,9 +24,9 @@ class MainActivity : ComponentActivity() {
                     GameState.SETUP -> SetupScreen(vm)
 
                     GameState.REVEAL -> RevealScreen(
-                        player = vm.currentPlayer()!!,
                         playerIndex = game!!.currentPlayerIndex,
                         totalPlayers = game.players.size,
+                        role = vm.currentPlayer()!!.role,
                         word = game.word,
                         onNext = { vm.nextPlayer() }
                     )

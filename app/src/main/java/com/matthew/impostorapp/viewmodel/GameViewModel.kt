@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.matthew.impostorapp.domain.model.Game
 import com.matthew.impostorapp.domain.model.GameState
+import com.matthew.impostorapp.domain.model.Player
 import com.matthew.impostorapp.usecase.AssignRoleUseCase
 
 class GameViewModel : ViewModel() {
@@ -14,32 +15,23 @@ class GameViewModel : ViewModel() {
     private val _game = mutableStateOf<Game?>(null)
     val game: State<Game?> = _game
 
-    private var playerCount: Int = 0
-    private var impostorCount: Int = 0
-    private var words: MutableList<String> = mutableListOf()
-
-    /* ================= CONFIGURACIÓN ================= */
-
-    fun configurePlayers(players: Int, impostors: Int) {
-        playerCount = players
-        impostorCount = impostors
-    }
+    private var playerCount = 0
+    private var impostorCount = 0
+    private val words = mutableListOf<String>()
 
     fun addWord(word: String) {
         words.add(word)
     }
 
-    /* ================= INICIO DE JUEGO ================= */
+    fun setupGame(players: Int, impostors: Int) {
+        playerCount = players
+        impostorCount = impostors
+        startRound()
+    }
 
-    fun startGame() {
-        require(words.isNotEmpty()) { "No hay palabras cargadas" }
-
-        val players = assignRoleUseCase.execute(
-            playerCount = playerCount,
-            impostorCount = impostorCount
-        )
-
-        val randomWord = words.random()
+    fun startRound() {
+        val players = assignRoleUseCase.execute(playerCount, impostorCount)
+        val randomWord = words.shuffled().random()
 
         _game.value = Game(
             players = players,
@@ -49,20 +41,20 @@ class GameViewModel : ViewModel() {
         )
     }
 
-    /* ================= RONDA ================= */
+    fun currentPlayer(): Player? {
+        return _game.value?.players?.get(_game.value!!.currentPlayerIndex)
+    }
 
-    fun currentPlayer() =
-        _game.value?.players?.get(_game.value!!.currentPlayerIndex)
 
     fun nextPlayer() {
         val game = _game.value ?: return
-        val nextIndex = game.currentPlayerIndex + 1
+        val next = game.currentPlayerIndex + 1
 
         _game.value =
-            if (nextIndex >= game.players.size) {
+            if (next >= game.players.size) {
                 game.copy(state = GameState.ROUND_END)
             } else {
-                game.copy(currentPlayerIndex = nextIndex)
+                game.copy(currentPlayerIndex = next)
             }
     }
 }

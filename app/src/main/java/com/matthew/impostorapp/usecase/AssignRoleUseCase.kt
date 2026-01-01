@@ -6,20 +6,12 @@ import com.matthew.impostorapp.domain.model.Role
 class AssignRoleUseCase {
 
     fun execute(playerCount: Int, impostorCount: Int): List<Player> {
-        require(impostorCount < playerCount) {
-            "Impostores deben ser menos que jugadores"
-        }
+        require(impostorCount < playerCount)
 
         val roles = MutableList(playerCount) { Role.PLAYER }
-
-        repeat(impostorCount) {
-            roles[it] = Role.IMPOSTOR
-        }
-
+        repeat(impostorCount) { roles[it] = Role.IMPOSTOR }
         roles.shuffle()
 
-        return roles.map { role ->
-            Player(role = role)
-        }
+        return roles.map { Player(role = it) }
     }
 }
