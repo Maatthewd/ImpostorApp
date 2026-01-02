@@ -50,6 +50,18 @@ class GameViewModel : ViewModel() {
         }
     }
 
+    fun categoryHasWords(category: String): Boolean {
+        return availableWords.any { it.category == category } ||
+                usedWords.any { it.category == category }
+    }
+
+    fun deleteCategory(category: String) {
+        categories.remove(category)
+        availableWords.removeAll { it.category == category }
+        usedWords.removeAll { it.category == category }
+    }
+
+
     // PALABRAS
     private val availableWords = mutableStateListOf<Word>()
     private val usedWords = mutableStateListOf<Word>()

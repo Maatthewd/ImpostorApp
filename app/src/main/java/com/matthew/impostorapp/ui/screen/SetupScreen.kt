@@ -23,6 +23,9 @@ fun SetupScreen(
     var category by remember { mutableStateOf("") }
     var editingCategory by remember { mutableStateOf<String?>(null) }
     var editedName by remember { mutableStateOf("") }
+    var categoryToDelete by remember { mutableStateOf<String?>(null) }
+    var showDeleteWarning by remember { mutableStateOf(false) }
+
 
     var word by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("") }
@@ -62,6 +65,8 @@ fun SetupScreen(
 
             vm.categoryList.forEach { cat ->
 
+
+
                 if (editingCategory == cat) {
 
                     OutlinedTextField(
@@ -97,18 +102,68 @@ fun SetupScreen(
                     ) {
                         Text("• $cat", color = Color.White)
 
-                        TextButton(onClick = {
-                            editingCategory = cat
-                            editedName = cat
-                        }) {
-                            Text("Editar", color = Color.Gray)
+                        Row {
+                            TextButton(onClick = {
+                                editingCategory = cat
+                                editedName = cat
+                            }) {
+                                Text("Editar", color = Color.Gray)
+                            }
+
+                            TextButton(onClick = {
+                                if (vm.categoryHasWords(cat)) {
+                                    categoryToDelete = cat
+                                    showDeleteWarning = true
+                                } else {
+                                    vm.deleteCategory(cat)
+                                }
+                            }) {
+                                Text("Borrar", color = Color.Red)
+                            }
                         }
                     }
                 }
+
             }
 
 
             Spacer(Modifier.height(24.dp))
+
+            if (showDeleteWarning && categoryToDelete != null) {
+
+                AlertDialog(
+                    onDismissRequest = {
+                        showDeleteWarning = false
+                        categoryToDelete = null
+                    },
+                    title = {
+                        Text("Eliminar categoría")
+                    },
+                    text = {
+                        Text(
+                            "La categoría \"$categoryToDelete\" tiene palabras asociadas.\n" +
+                                    "Si continuás, se eliminarán TODAS esas palabras."
+                        )
+                    },
+                    confirmButton = {
+                        Button(onClick = {
+                            vm.deleteCategory(categoryToDelete!!)
+                            showDeleteWarning = false
+                            categoryToDelete = null
+                        }) {
+                            Text("Eliminar")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            showDeleteWarning = false
+                            categoryToDelete = null
+                        }) {
+                            Text("Cancelar")
+                        }
+                    }
+                )
+            }
 
             /* ===== PALABRAS ===== */
 
