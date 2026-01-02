@@ -12,13 +12,21 @@ fun RoundEndScreen(
     hasWords: Boolean,
     onNextRound: () -> Unit,
     onRestartGame: () -> Unit,
-    onConfig: () -> Unit
+    onConfig: () -> Unit,
+    currentRound: Int,
+    totalRounds: Int
 ) {
     Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.padding(24.dp),
             verticalArrangement = Arrangement.Center
         ) {
+
+            Text(
+                text = "Ronda ${currentRound} finalizada",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium
+            )
 
             Text("Fin de ronda", color = Color.White, style = MaterialTheme.typography.headlineLarge)
 

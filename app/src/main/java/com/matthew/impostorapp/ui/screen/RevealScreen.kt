@@ -16,6 +16,8 @@ fun RevealScreen(
     totalPlayers: Int,
     role: Role,
     word: String,
+    currentRound: Int,
+    totalRounds: Int,
     onNext: () -> Unit
 ) {
     var reveal by remember { mutableStateOf(false) }
@@ -25,6 +27,12 @@ fun RevealScreen(
             modifier = Modifier.padding(24.dp),
             verticalArrangement = Arrangement.Center
         ) {
+
+            Text(
+                text = "Ronda $currentRound de $totalRounds",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium
+            )
 
             Text(
                 "Jugador ${playerIndex + 1} de $totalPlayers",

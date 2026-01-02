@@ -28,15 +28,20 @@ class MainActivity : ComponentActivity() {
                         totalPlayers = game.players.size,
                         role = vm.currentPlayer()!!.role,
                         word = game.word,
+                        currentRound = vm.currentRound,
+                        totalRounds = vm.totalRounds,
                         onNext = { vm.nextPlayer() }
                     )
+
 
                     GameState.ROUND_END ->
                         RoundEndScreen(
                             hasWords = vm.words.isNotEmpty(),
+                            currentRound = vm.currentRound,
+                            totalRounds = vm.totalRounds,
                             onNextRound = { vm.startRound() },
-                            onRestartGame = { vm.resetGame()},
-                            onConfig = {vm.openConfig()}
+                            onRestartGame = { vm.resetGame() },
+                            onConfig = { vm.openConfig() }
                         )
 
                     GameState.CONFIG -> SetupScreen(

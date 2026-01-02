@@ -95,4 +95,15 @@ class GameViewModel : ViewModel() {
         startRound()
     }
 
+
+    // Mostrar rondas
+    val currentRound: Int
+        get() = usedWords.size
+
+    val totalRounds: Int
+        get() = availableWords.size + usedWords.size
+
+
+    // CATEGORIAS
+
 }
