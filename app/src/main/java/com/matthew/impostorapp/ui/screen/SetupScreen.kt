@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.matthew.impostorapp.domain.model.Role
 import com.matthew.impostorapp.viewmodel.GameViewModel
 
 @Composable
@@ -16,19 +17,45 @@ fun SetupScreen(
     isReconfig: Boolean = false,
     onConfirm: ((Int, Int) -> Unit)? = null
 ) {
-
+    // jugadores
     var players by remember { mutableStateOf("") }
     var impostors by remember { mutableStateOf("") }
 
+    val playersInt = players.toIntOrNull()
+    val impostorsInt = impostors.toIntOrNull()
+
+    // categorias
     var category by remember { mutableStateOf("") }
     var editingCategory by remember { mutableStateOf<String?>(null) }
     var editedName by remember { mutableStateOf("") }
     var categoryToDelete by remember { mutableStateOf<String?>(null) }
     var showDeleteWarning by remember { mutableStateOf(false) }
 
-
+    // palabras
     var word by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("") }
+
+
+    // parametros para config
+    val isValidConfig =
+        playersInt != null &&
+                impostorsInt != null &&
+                playersInt > 0 &&
+                impostorsInt > 0 &&
+                impostorsInt < playersInt
+
+    val canStartGame =
+        isValidConfig &&
+                vm.words.isNotEmpty()
+
+    LaunchedEffect(isReconfig) {
+        if (isReconfig) {
+            players = vm.game.value?.players?.size?.toString() ?: ""
+            impostors = vm.game.value?.players
+                ?.count { it.role == Role.IMPOSTOR }
+                ?.toString() ?: ""
+        }
+    }
 
     Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
         Column(
@@ -50,7 +77,7 @@ fun SetupScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            /* ===== CATEGORÍAS ===== */
+            // CATEGORIAS
 
             Text("Categorías", color = Color.White)
 
@@ -165,7 +192,7 @@ fun SetupScreen(
                 )
             }
 
-            /* ===== PALABRAS ===== */
+            // PALABRAS
 
             Text("Palabras", color = Color.White)
 
@@ -200,8 +227,8 @@ fun SetupScreen(
 
             Button(
                 onClick = {
-                    val p = players.toIntOrNull() ?: return@Button
-                    val i = impostors.toIntOrNull() ?: return@Button
+                    val p = playersInt ?: return@Button
+                    val i = impostorsInt ?: return@Button
 
                     if (isReconfig) {
                         onConfirm?.invoke(p, i)
@@ -209,8 +236,8 @@ fun SetupScreen(
                         vm.setupGame(p, i)
                     }
                 },
-                enabled = vm.words.isNotEmpty()
-            ) {
+                enabled = canStartGame
+            ){
                 Text(if (isReconfig) "Confirmar cambios" else "Iniciar juego")
             }
         }
