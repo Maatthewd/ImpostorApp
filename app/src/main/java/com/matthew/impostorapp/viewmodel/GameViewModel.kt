@@ -1,7 +1,9 @@
 package com.matthew.impostorapp.viewmodel
 
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import com.matthew.impostorapp.domain.model.Game
 import com.matthew.impostorapp.domain.model.GameState
@@ -17,11 +19,11 @@ class GameViewModel : ViewModel() {
     private var playerCount = 0
     private var impostorCount = 0
 
-    // 🔹 palabras disponibles y usadas
-    private val availableWords = mutableListOf<String>()
-    private val usedWords = mutableListOf<String>()
+    // palabras disponibles y usadas
+    private val availableWords: SnapshotStateList<String> = mutableStateListOf()
+    private val usedWords: SnapshotStateList<String> = mutableStateListOf()
 
-    // 🔹 para que la UI pueda leerlas
+    // para que la UI pueda leerlas
     val words: List<String> get() = availableWords
 
     fun addWord(word: String) {

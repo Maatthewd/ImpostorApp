@@ -1,6 +1,8 @@
 package com.matthew.impostorapp.ui.screen
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -17,8 +19,11 @@ fun SetupScreen(vm: GameViewModel) {
 
     Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.Top
         ) {
 
             Text("Impostor", color = Color.White, style = MaterialTheme.typography.headlineLarge)
@@ -75,6 +80,7 @@ fun SetupScreen(vm: GameViewModel) {
             ) {
                 Text("Iniciar juego")
             }
+
         }
     }
 }
