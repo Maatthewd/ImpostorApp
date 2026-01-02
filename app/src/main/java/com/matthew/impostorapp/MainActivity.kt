@@ -31,9 +31,13 @@ class MainActivity : ComponentActivity() {
                         onNext = { vm.nextPlayer() }
                     )
 
-                    GameState.ROUND_END -> RoundEndScreen {
-                        vm.startRound()
-                    }
+                    GameState.ROUND_END ->
+                        RoundEndScreen(
+                            hasWords = vm.words.isNotEmpty(),
+                            onNextRound = { vm.startRound() },
+                            onRestartGame = { vm.resetGame() }
+                        )
+
                 }
             }
         }

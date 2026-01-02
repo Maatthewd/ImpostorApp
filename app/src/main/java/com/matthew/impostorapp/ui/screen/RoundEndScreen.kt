@@ -8,8 +8,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun RoundEndScreen(onNextRound: () -> Unit) {
-
+fun RoundEndScreen(
+    hasWords: Boolean,
+    onNextRound: () -> Unit,
+    onRestartGame: () -> Unit
+) {
     Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.padding(24.dp),
@@ -20,8 +23,21 @@ fun RoundEndScreen(onNextRound: () -> Unit) {
 
             Spacer(Modifier.height(32.dp))
 
-            Button(onClick = onNextRound, modifier = Modifier.fillMaxWidth()) {
-                Text("Nueva ronda")
+            if (hasWords) {
+                Button(onClick = onNextRound, modifier = Modifier.fillMaxWidth()) {
+                    Text("Nueva ronda")
+                }
+            } else {
+                Text("No quedan palabras", color = Color.White)
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = onRestartGame,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Volver al inicio")
             }
         }
     }

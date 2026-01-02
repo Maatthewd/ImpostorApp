@@ -5,7 +5,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.matthew.impostorapp.domain.model.Game
 import com.matthew.impostorapp.domain.model.GameState
-import com.matthew.impostorapp.domain.model.Player
 import com.matthew.impostorapp.usecase.AssignRoleUseCase
 
 class GameViewModel : ViewModel() {
@@ -17,10 +16,22 @@ class GameViewModel : ViewModel() {
 
     private var playerCount = 0
     private var impostorCount = 0
-    private val words = mutableListOf<String>()
+
+    // 🔹 palabras disponibles y usadas
+    private val availableWords = mutableListOf<String>()
+    private val usedWords = mutableListOf<String>()
+
+    // 🔹 para que la UI pueda leerlas
+    val words: List<String> get() = availableWords
 
     fun addWord(word: String) {
-        words.add(word)
+        if (word.isNotBlank() && word !in availableWords && word !in usedWords) {
+            availableWords.add(word)
+        }
+    }
+
+    fun removeWord(word: String) {
+        availableWords.remove(word)
     }
 
     fun setupGame(players: Int, impostors: Int) {
@@ -30,8 +41,13 @@ class GameViewModel : ViewModel() {
     }
 
     fun startRound() {
+        if (availableWords.isEmpty()) return
+
         val players = assignRoleUseCase.execute(playerCount, impostorCount)
-        val randomWord = words.shuffled().random()
+
+        val randomWord = availableWords.random()
+        availableWords.remove(randomWord)
+        usedWords.add(randomWord)
 
         _game.value = Game(
             players = players,
@@ -41,10 +57,16 @@ class GameViewModel : ViewModel() {
         )
     }
 
-    fun currentPlayer(): Player? {
-        return _game.value?.players?.get(_game.value!!.currentPlayerIndex)
+    fun resetGame() {
+        _game.value = null
+        playerCount = 0
+        impostorCount = 0
+        availableWords.clear()
+        usedWords.clear()
     }
 
+    fun currentPlayer() =
+        _game.value?.players?.get(_game.value!!.currentPlayerIndex)
 
     fun nextPlayer() {
         val game = _game.value ?: return

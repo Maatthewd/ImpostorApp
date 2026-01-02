@@ -33,19 +33,35 @@ fun SetupScreen(vm: GameViewModel) {
             OutlinedTextField(
                 value = word,
                 onValueChange = { word = it },
-                label = { Text("Agregar palabra") }
+                label = { Text("Nueva palabra") }
             )
 
             Button(
                 onClick = {
-                    if (word.isNotBlank()) {
-                        vm.addWord(word)
-                        word = ""
-                    }
+                    vm.addWord(word)
+                    word = ""
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Agregar palabra")
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // LISTA DE PALABRAS AGREGADAS
+            Text("Palabras cargadas:", color = Color.White)
+
+            vm.words.forEach { w ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("• $w", color = Color.White)
+
+                    TextButton(onClick = { vm.removeWord(w) }) {
+                        Text("Borrar", color = Color.Red)
+                    }
+                }
             }
 
             Spacer(Modifier.height(24.dp))
@@ -54,7 +70,8 @@ fun SetupScreen(vm: GameViewModel) {
                 onClick = {
                     vm.setupGame(players.toInt(), impostors.toInt())
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = vm.words.isNotEmpty()
             ) {
                 Text("Iniciar juego")
             }
