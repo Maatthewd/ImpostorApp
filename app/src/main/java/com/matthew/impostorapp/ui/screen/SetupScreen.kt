@@ -11,60 +11,130 @@ import androidx.compose.ui.unit.dp
 import com.matthew.impostorapp.viewmodel.GameViewModel
 
 @Composable
-fun SetupScreen(vm: GameViewModel,
-                isReconfig: Boolean = false,
-                onConfirm: ((Int, Int) -> Unit)? = null) {
+fun SetupScreen(
+    vm: GameViewModel,
+    isReconfig: Boolean = false,
+    onConfirm: ((Int, Int) -> Unit)? = null
+) {
 
     var players by remember { mutableStateOf("") }
     var impostors by remember { mutableStateOf("") }
+
+    var category by remember { mutableStateOf("") }
+    var editingCategory by remember { mutableStateOf<String?>(null) }
+    var editedName by remember { mutableStateOf("") }
+
     var word by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("") }
 
     Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.Top
+                .verticalScroll(rememberScrollState())
         ) {
 
-            Text("Impostor", color = Color.White, style = MaterialTheme.typography.headlineLarge)
+            Text(
+                if (isReconfig) "Configurar próxima ronda" else "Impostor",
+                color = Color.White,
+                style = MaterialTheme.typography.headlineLarge
+            )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
 
             OutlinedTextField(players, { players = it }, label = { Text("Jugadores") })
             OutlinedTextField(impostors, { impostors = it }, label = { Text("Impostores") })
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
 
-            OutlinedTextField(
-                value = word,
-                onValueChange = { word = it },
-                label = { Text("Nueva palabra") }
+            /* ===== CATEGORÍAS ===== */
+
+            Text("Categorías", color = Color.White)
+
+            OutlinedTextField(category, { category = it }, label = { Text("Nueva categoría") })
+
+            Button(onClick = {
+                vm.addCategory(category)
+                category = ""
+            }) {
+                Text("Agregar categoría")
+            }
+
+            vm.categoryList.forEach { cat ->
+
+                if (editingCategory == cat) {
+
+                    OutlinedTextField(
+                        value = editedName,
+                        onValueChange = { editedName = it },
+                        label = { Text("Editar categoría") }
+                    )
+
+                    Row {
+                        Button(onClick = {
+                            vm.renameCategory(cat, editedName)
+                            editingCategory = null
+                            editedName = ""
+                        }) {
+                            Text("Guardar")
+                        }
+
+                        Spacer(Modifier.width(8.dp))
+
+                        TextButton(onClick = {
+                            editingCategory = null
+                            editedName = ""
+                        }) {
+                            Text("Cancelar")
+                        }
+                    }
+
+                } else {
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("• $cat", color = Color.White)
+
+                        TextButton(onClick = {
+                            editingCategory = cat
+                            editedName = cat
+                        }) {
+                            Text("Editar", color = Color.Gray)
+                        }
+                    }
+                }
+            }
+
+
+            Spacer(Modifier.height(24.dp))
+
+            /* ===== PALABRAS ===== */
+
+            Text("Palabras", color = Color.White)
+
+            OutlinedTextField(word, { word = it }, label = { Text("Palabra") })
+
+            DropdownMenuBox(
+                options = vm.categoryList,
+                selected = selectedCategory,
+                onSelect = { selectedCategory = it }
             )
 
-            Button(
-                onClick = {
-                    vm.addWord(word)
-                    word = ""
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Button(onClick = {
+                vm.addWord(word, selectedCategory)
+                word = ""
+            }) {
                 Text("Agregar palabra")
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            // LISTA DE PALABRAS AGREGADAS
-            Text("Palabras cargadas:", color = Color.White)
-
             vm.words.forEach { w ->
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("• $w", color = Color.White)
-
+                    Text("${w.value} (${w.category})", color = Color.White)
                     TextButton(onClick = { vm.removeWord(w) }) {
                         Text("Borrar", color = Color.Red)
                     }
@@ -75,22 +145,45 @@ fun SetupScreen(vm: GameViewModel,
 
             Button(
                 onClick = {
-                    val p = players.toIntOrNull()
-                    val i = impostors.toIntOrNull()
-                    if (p != null && i != null) {
-                        if (isReconfig) {
-                            onConfirm?.invoke(p, i)
-                        } else {
-                            vm.setupGame(p, i)
-                        }
+                    val p = players.toIntOrNull() ?: return@Button
+                    val i = impostors.toIntOrNull() ?: return@Button
+
+                    if (isReconfig) {
+                        onConfirm?.invoke(p, i)
+                    } else {
+                        vm.setupGame(p, i)
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
                 enabled = vm.words.isNotEmpty()
             ) {
-                Text(if (isReconfig) "Guardar configuración" else "Iniciar juego")
+                Text(if (isReconfig) "Confirmar cambios" else "Iniciar juego")
             }
+        }
+    }
+}
+@Composable
+fun DropdownMenuBox(
+    options: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
 
+    Box {
+        OutlinedButton(onClick = { expanded = true }) {
+            Text(if (selected.isBlank()) "Elegir categoría" else selected)
+        }
+
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach {
+                DropdownMenuItem(
+                    text = { Text(it) },
+                    onClick = {
+                        onSelect(it)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

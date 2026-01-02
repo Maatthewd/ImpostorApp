@@ -4,5 +4,5 @@ import java.util.UUID
 
 data class Word(
     val value: String,
-    val categoryId: UUID
+    val category: String
 )

@@ -21,18 +21,21 @@ class MainActivity : ComponentActivity() {
                 val game = vm.game.value
 
                 when (game?.state ?: GameState.SETUP) {
-                    GameState.SETUP -> SetupScreen(vm)
 
-                    GameState.REVEAL -> RevealScreen(
-                        playerIndex = game!!.currentPlayerIndex,
-                        totalPlayers = game.players.size,
-                        role = vm.currentPlayer()!!.role,
-                        word = game.word,
-                        currentRound = vm.currentRound,
-                        totalRounds = vm.totalRounds,
-                        onNext = { vm.nextPlayer() }
-                    )
+                    GameState.SETUP ->
+                        SetupScreen(vm)
 
+                    GameState.REVEAL ->
+                        RevealScreen(
+                            playerIndex = game!!.currentPlayerIndex,
+                            totalPlayers = game.players.size,
+                            role = vm.currentPlayer()!!.role,
+                            word = game.word,
+                            category = game.category,
+                            currentRound = vm.currentRound,
+                            totalRounds = vm.totalRounds,
+                            onNext = { vm.nextPlayer() }
+                        )
 
                     GameState.ROUND_END ->
                         RoundEndScreen(
@@ -44,13 +47,14 @@ class MainActivity : ComponentActivity() {
                             onConfig = { vm.openConfig() }
                         )
 
-                    GameState.CONFIG -> SetupScreen(
-                        vm = vm,
-                        isReconfig = true,
-                        onConfirm = { p, i -> vm.applyConfigAndStart(p, i) }
-                    )
-
+                    GameState.CONFIG ->
+                        SetupScreen(
+                            vm = vm,
+                            isReconfig = true,
+                            onConfirm = { p, i -> vm.applyConfigAndStart(p, i) }
+                        )
                 }
+
             }
         }
     }

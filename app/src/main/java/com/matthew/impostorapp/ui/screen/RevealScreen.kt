@@ -16,6 +16,7 @@ fun RevealScreen(
     totalPlayers: Int,
     role: Role,
     word: String,
+    category: String,
     currentRound: Int,
     totalRounds: Int,
     onNext: () -> Unit
@@ -28,11 +29,15 @@ fun RevealScreen(
             verticalArrangement = Arrangement.Center
         ) {
 
+            // RONDA
+
             Text(
                 text = "Ronda $currentRound de $totalRounds",
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium
             )
+
+            // JUGADOR
 
             Text(
                 "Jugador ${playerIndex + 1} de $totalPlayers",
@@ -42,6 +47,17 @@ fun RevealScreen(
 
             Spacer(Modifier.height(32.dp))
 
+            // CATEGORÍA
+
+            Text(
+                text = category.uppercase(),
+                color = Color.Gray,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            // REVELAR ROL
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -55,6 +71,9 @@ fun RevealScreen(
                         )
                     }
             ) {
+
+
+
                 Text(
                     text = when {
                         !reveal -> "Mantené apretado para revelar"
