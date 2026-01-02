@@ -11,7 +11,8 @@ import androidx.compose.ui.unit.dp
 fun RoundEndScreen(
     hasWords: Boolean,
     onNextRound: () -> Unit,
-    onRestartGame: () -> Unit
+    onRestartGame: () -> Unit,
+    onConfig: () -> Unit
 ) {
     Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
         Column(
@@ -38,6 +39,13 @@ fun RoundEndScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Volver al inicio")
+            }
+
+            OutlinedButton(
+                onClick = onConfig,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Configurar proximas rondas")
             }
         }
     }

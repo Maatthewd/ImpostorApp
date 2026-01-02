@@ -81,4 +81,18 @@ class GameViewModel : ViewModel() {
                 game.copy(currentPlayerIndex = next)
             }
     }
+
+    fun openConfig() {
+        _game.value = _game.value?.copy(state = GameState.CONFIG)
+    }
+
+    fun applyConfigAndStart(
+        players: Int,
+        impostors: Int
+    ) {
+        playerCount = players
+        impostorCount = impostors
+        startRound()
+    }
+
 }

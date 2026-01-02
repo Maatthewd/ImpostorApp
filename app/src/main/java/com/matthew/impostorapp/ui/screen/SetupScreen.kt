@@ -11,7 +11,9 @@ import androidx.compose.ui.unit.dp
 import com.matthew.impostorapp.viewmodel.GameViewModel
 
 @Composable
-fun SetupScreen(vm: GameViewModel) {
+fun SetupScreen(vm: GameViewModel,
+                isReconfig: Boolean = false,
+                onConfirm: ((Int, Int) -> Unit)? = null) {
 
     var players by remember { mutableStateOf("") }
     var impostors by remember { mutableStateOf("") }
@@ -73,12 +75,20 @@ fun SetupScreen(vm: GameViewModel) {
 
             Button(
                 onClick = {
-                    vm.setupGame(players.toInt(), impostors.toInt())
+                    val p = players.toIntOrNull()
+                    val i = impostors.toIntOrNull()
+                    if (p != null && i != null) {
+                        if (isReconfig) {
+                            onConfirm?.invoke(p, i)
+                        } else {
+                            vm.setupGame(p, i)
+                        }
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = vm.words.isNotEmpty()
             ) {
-                Text("Iniciar juego")
+                Text(if (isReconfig) "Guardar configuración" else "Iniciar juego")
             }
 
         }

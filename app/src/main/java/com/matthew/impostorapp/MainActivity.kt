@@ -35,8 +35,15 @@ class MainActivity : ComponentActivity() {
                         RoundEndScreen(
                             hasWords = vm.words.isNotEmpty(),
                             onNextRound = { vm.startRound() },
-                            onRestartGame = { vm.resetGame() }
+                            onRestartGame = { vm.resetGame()},
+                            onConfig = {vm.openConfig()}
                         )
+
+                    GameState.CONFIG -> SetupScreen(
+                        vm = vm,
+                        isReconfig = true,
+                        onConfirm = { p, i -> vm.applyConfigAndStart(p, i) }
+                    )
 
                 }
             }
