@@ -9,11 +9,14 @@ import com.matthew.impostorapp.data.local.entity.WordEntity
 import com.matthew.impostorapp.data.seed.SeedLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 object DatabaseProvider {
     @Volatile
     private var INSTANCE: AppDatabase? = null
+
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun getDatabase(context: Context): AppDatabase {
         return INSTANCE ?: synchronized(this) {
@@ -25,9 +28,8 @@ object DatabaseProvider {
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
-                        // Cargar datos iniciales cuando se crea la DB por primera vez
                         INSTANCE?.let { database ->
-                            CoroutineScope(Dispatchers.IO).launch {
+                            applicationScope.launch {
                                 preloadData(context, database)
                             }
                         }
@@ -41,23 +43,27 @@ object DatabaseProvider {
     }
 
     private suspend fun preloadData(context: Context, db: AppDatabase) {
-        val loader = SeedLoader(context)
-        val categories = loader.loadCategories()
-        val words = loader.loadWords()
+        try {
+            val loader = SeedLoader(context)
+            val categories = loader.loadCategories()
+            val words = loader.loadWords()
 
-        categories.forEach { categoryName ->
-            val categoryId = db.categoryDao()
-                .insert(CategoryEntity(name = categoryName))
+            categories.forEach { categoryName ->
+                val categoryId = db.categoryDao()
+                    .insert(CategoryEntity(name = categoryName))
 
-            words[categoryName]?.forEach { value ->
-                db.wordDao().insert(
-                    WordEntity(
-                        value = value,
-                        normalizedValue = value.trim().lowercase(),
-                        categoryId = categoryId
+                words[categoryName]?.forEach { value ->
+                    db.wordDao().insert(
+                        WordEntity(
+                            value = value,
+                            normalizedValue = value.trim().lowercase(),
+                            categoryId = categoryId
+                        )
                     )
-                )
+                }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }
