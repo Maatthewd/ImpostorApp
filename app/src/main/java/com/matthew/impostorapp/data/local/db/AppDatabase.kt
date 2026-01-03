@@ -11,7 +11,8 @@ import com.matthew.impostorapp.data.seed.SeedLoader
 
 @Database(
     entities = [CategoryEntity::class, WordEntity::class],
-    version = 1
+    version = 1,
+    exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
