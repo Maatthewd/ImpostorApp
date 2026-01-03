@@ -1,14 +1,12 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("kotlin-kapt")
+    id("kotlin-kapt")  // Volvé a KAPT
 }
 
 android {
     namespace = "com.matthew.impostorapp"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.matthew.impostorapp"
@@ -29,22 +27,28 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.2"  // Compatible con Kotlin 1.9.10
     }
 }
 
 kapt {
     correctErrorTypes = true
 }
-
 
 dependencies {
     implementation(libs.androidx.core.ktx)
@@ -58,8 +62,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
-    implementation(libs.androidx.room.ktx)
-    implementation(libs.firebase.crashlytics.buildtools)
     implementation("com.google.code.gson:gson:2.10.1")
 
     testImplementation(libs.junit)
@@ -70,10 +72,9 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
+    // Room con KAPT
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     kapt("androidx.room:room-compiler:$roomVersion")
-
 }
-
