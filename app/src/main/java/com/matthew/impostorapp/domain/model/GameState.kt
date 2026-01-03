@@ -1,8 +1,9 @@
 package com.matthew.impostorapp.domain.model
 
 enum class GameState {
-    SETUP,
+    LOBBY,
     REVEAL,
     ROUND_END,
-    CONFIG
+    CONFIG,
+    GAME_OVER
 }

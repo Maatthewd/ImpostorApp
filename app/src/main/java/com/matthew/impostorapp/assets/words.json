@@ -1,0 +1,18 @@
+{
+  "Jugadores": [
+    "Messi",
+    "Mbappe",
+    "Haaland",
+    "Foden"
+  ],
+  "Selecciones": [
+    "Argentina",
+    "España",
+    "Portugal",
+    "Francia"
+  ],
+  "Equipos": [
+    "Barcelona",
+    "Real Madrid"
+  ]
+}

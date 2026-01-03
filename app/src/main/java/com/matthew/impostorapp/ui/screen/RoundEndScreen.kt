@@ -9,52 +9,42 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun RoundEndScreen(
-    hasWords: Boolean,
     onNextRound: () -> Unit,
-    onRestartGame: () -> Unit,
     onConfig: () -> Unit,
-    currentRound: Int,
-    totalRounds: Int
+    onEndGame: () -> Unit
 ) {
-    Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.Center
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+
+        Text(
+            text = "Fin de ronda",
+            style = MaterialTheme.typography.headlineLarge,
+            color = Color.White
+        )
+
+        Button(
+            onClick = onNextRound,
+            modifier = Modifier.fillMaxWidth()
         ) {
+            Text("Siguiente ronda")
+        }
 
-            Text(
-                text = "Ronda ${currentRound} finalizada",
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium
-            )
+        OutlinedButton(
+            onClick = onConfig,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Configurar")
+        }
 
-            Text("Fin de ronda", color = Color.White, style = MaterialTheme.typography.headlineLarge)
-
-            Spacer(Modifier.height(32.dp))
-
-            if (hasWords) {
-                Button(onClick = onNextRound, modifier = Modifier.fillMaxWidth()) {
-                    Text("Nueva ronda")
-                }
-            } else {
-                Text("No quedan palabras", color = Color.White)
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            OutlinedButton(
-                onClick = onRestartGame,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Volver al inicio")
-            }
-
-            OutlinedButton(
-                onClick = onConfig,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Configurar proximas rondas")
-            }
+        OutlinedButton(
+            onClick = onEndGame,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Finalizar Juego")
         }
     }
 }

@@ -32,7 +32,7 @@ fun RevealScreen(
             // RONDA
 
             Text(
-                text = "Ronda $currentRound de $totalRounds",
+                text = "Ronda $currentRound de ${totalRounds + 1}",
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -71,8 +71,6 @@ fun RevealScreen(
                         )
                     }
             ) {
-
-
 
                 Text(
                     text = when {

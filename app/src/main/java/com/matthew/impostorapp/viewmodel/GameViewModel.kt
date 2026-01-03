@@ -2,108 +2,101 @@ package com.matthew.impostorapp.viewmodel
 
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.matthew.impostorapp.data.repository.GameRepository
 import com.matthew.impostorapp.domain.model.*
 import com.matthew.impostorapp.usecase.AssignRoleUseCase
+import kotlinx.coroutines.launch
 
-class GameViewModel : ViewModel() {
+class GameViewModel(
+    private val repository: GameRepository
+) : ViewModel() {
 
     private val assignRoleUseCase = AssignRoleUseCase()
 
     private val _game = mutableStateOf<Game?>(null)
     val game: State<Game?> = _game
 
-    private var playerCount = 0
-    private var impostorCount = 0
+    // =====================
+    // ESTADO DE CONFIG
+    // =====================
 
-    // CATEGORIAS
-    private val categories = mutableStateListOf<String>()
-    val categoryList: List<String> get() = categories
+    private var currentRound = 1
+    private var currentConfig: GameConfig? = null
 
-    fun addCategory(name: String) {
-        if (name.isNotBlank() && name !in categories) {
-            categories.add(name)
+    // =====================
+    // BANCO DE PARTIDA
+    // =====================
+
+    private val wordBank = mutableStateListOf<Word>()
+    private val usedWords = mutableSetOf<String>()
+
+    private val _categories = mutableStateListOf<String>()
+    val categoryList: List<String> get() = _categories
+
+    // =====================
+    // INIT
+    // =====================
+
+    init {
+        loadInitialData()
+    }
+
+    private fun loadInitialData() {
+        viewModelScope.launch {
+            _categories.clear()
+            _categories.addAll(repository.getCategories())
         }
     }
 
-    fun removeCategory(name: String) {
-        categories.remove(name)
-        availableWords.removeAll { it.category == name }
-        usedWords.removeAll { it.category == name }
-    }
-
-    fun renameCategory(oldName: String, newName: String) {
-        if (newName.isBlank() || newName == oldName || newName in categories) return
-
-        val index = categories.indexOf(oldName)
-        if (index == -1) return
-
-        categories[index] = newName
-
-        // actualizar palabras disponibles
-        availableWords.replaceAll {
-            if (it.category == oldName) it.copy(category = newName) else it
-        }
-
-        // actualizar palabras usadas
-        usedWords.replaceAll {
-            if (it.category == oldName) it.copy(category = newName) else it
-        }
-    }
-
-    fun categoryHasWords(category: String): Boolean {
-        return availableWords.any { it.category == category } ||
-                usedWords.any { it.category == category }
-    }
-
-    fun deleteCategory(category: String) {
-        categories.remove(category)
-        availableWords.removeAll { it.category == category }
-        usedWords.removeAll { it.category == category }
-    }
-
-
-    // PALABRAS
-    private val availableWords = mutableStateListOf<Word>()
-    private val usedWords = mutableStateListOf<Word>()
-
-    val words: List<Word> get() = availableWords
-
-    fun addWord(value: String, category: String) {
-        if (
-            value.isBlank() ||
-            category !in categories ||
-            availableWords.any { it.value == value }
-        ) return
-
-        availableWords.add(Word(value, category))
-    }
-
-    fun removeWord(word: Word) {
-        availableWords.remove(word)
-    }
-
+    // =====================
     // JUEGO
-    fun setupGame(players: Int, impostors: Int) {
-        playerCount = players
-        impostorCount = impostors
-        startRound()
+    // =====================
+
+    private var totalRounds = 0
+    fun setupGame(config: GameConfig) {
+        currentConfig = config
+        currentRound = 1
+        usedWords.clear()
+
+        viewModelScope.launch {
+            wordBank.clear()
+            wordBank.addAll(repository.getWords())
+            startRound()
+        }
+
+        totalRounds = wordBank.count {
+            it.matchesCategoryMode(config.categoryMode)
+        }
     }
 
-    fun startRound() {
-        if (availableWords.isEmpty()) return
+    private fun startRound() {
+        val config = currentConfig ?: return
 
-        val players = assignRoleUseCase.execute(playerCount, impostorCount)
+        val eligibleWords = wordBank
+            .filter { it.matchesCategoryMode(config.categoryMode) }
+            .filter { it.normalizedValue !in usedWords }
 
-        val selectedWord = availableWords.random()
-        availableWords.remove(selectedWord)
-        usedWords.add(selectedWord)
+        if (eligibleWords.isEmpty()) {
+            _game.value = _game.value?.copy(state = GameState.GAME_OVER)
+            return
+        }
+
+        val selectedWord = eligibleWords.random()
+        usedWords.add(selectedWord.normalizedValue)
+
+        val players = assignRoleUseCase.execute(
+            config.players,
+            config.impostors
+        )
 
         _game.value = Game(
             players = players,
-            word = selectedWord.value,
-            category = selectedWord.category,
+            word = selectedWord,
             currentPlayerIndex = 0,
-            state = GameState.REVEAL
+            state = GameState.REVEAL,
+            config = config,
+            round = currentRound
         )
     }
 
@@ -119,33 +112,28 @@ class GameViewModel : ViewModel() {
             }
     }
 
-    // CONFIG
-
-    fun openConfig() {
-        val game = _game.value ?: return
-        _game.value = game.copy(state = GameState.CONFIG)
+    fun nextRound() {
+        currentRound++
+        startRound()
     }
 
-    fun applyConfigAndStart(players: Int, impostors: Int) {
-        playerCount = players
-        impostorCount = impostors
-        startRound()
+    fun endGame() {
+        _game.value = _game.value?.copy(state = GameState.GAME_OVER)
+    }
+
+    fun onConfig() {
+        _game.value = _game.value?.copy(state = GameState.CONFIG)
     }
 
     fun resetGame() {
         _game.value = null
-        playerCount = 0
-        impostorCount = 0
-        availableWords.clear()
+        currentConfig = null
+        currentRound = 1
         usedWords.clear()
-        categories.clear()
+        wordBank.clear()
     }
 
-    // INFO
 
-    fun currentPlayer(): Player? =
-        _game.value?.players?.getOrNull(_game.value!!.currentPlayerIndex)
+    fun getTotalRounds(): Int = totalRounds
 
-    val currentRound: Int get() = usedWords.size
-    val totalRounds: Int get() = availableWords.size + usedWords.size
 }
