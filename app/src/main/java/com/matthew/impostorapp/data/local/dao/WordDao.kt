@@ -25,4 +25,7 @@ interface WordDao {
 
     @Query("SELECT COUNT(*) FROM words WHERE categoryId = :categoryId")
     suspend fun countByCategory(categoryId: Long): Int
+
+    @Query("DELETE FROM words WHERE normalizedValue = :normalizedValue AND categoryId = :categoryId")
+    suspend fun deleteByValueAndCategory(normalizedValue: String, categoryId: Long)
 }
