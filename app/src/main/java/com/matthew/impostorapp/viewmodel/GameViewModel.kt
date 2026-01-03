@@ -206,6 +206,20 @@ class GameViewModel(
         }
     }
 
+    fun deleteWord(categoryName: String, word: String) {
+        viewModelScope.launch {
+            repository.deleteWord(categoryName, word).fold(
+                onSuccess = {
+                    loadWordsForCategory(categoryName)
+                    _managementError.value = null
+                },
+                onFailure = { error ->
+                    _managementError.value = error.message
+                }
+            )
+        }
+    }
+
     fun clearError() {
         _managementError.value = null
     }

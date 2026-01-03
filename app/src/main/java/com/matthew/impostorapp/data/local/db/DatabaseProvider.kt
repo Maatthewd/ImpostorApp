@@ -18,8 +18,9 @@ object DatabaseProvider {
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // Incrementá este número cada vez que actualices los JSONs
-    private const val SEED_VERSION = 2
+    // IMPORTANTE: Solo incrementá este número cuando cambies los JSONs
+    // NO lo cambies cuando agregues datos desde la app
+    private const val SEED_VERSION = 1
 
     fun getDatabase(context: Context): AppDatabase {
         return INSTANCE ?: synchronized(this) {
@@ -88,20 +89,27 @@ object DatabaseProvider {
     private suspend fun updateData(context: Context, db: AppDatabase) {
         try {
             val loader = SeedLoader(context)
-            val categories = loader.loadCategories()
-            val words = loader.loadWords()
+            val categoriesFromJson = loader.loadCategories()
+            val wordsFromJson = loader.loadWords()
 
+            // CORREGIDO: Obtener categorías existentes por nombre
             val existingCategories = db.categoryDao().getAll()
+            val existingCategoryNames = existingCategories.map { it.name }.toSet()
 
-            categories.forEach { categoryName ->
-                // Buscar si la categoría ya existe
-                val existingCategory = existingCategories.find { it.name == categoryName }
+            categoriesFromJson.forEach { categoryName ->
+                // CORREGIDO: Solo procesar si la categoría existe
+                // Si no existe, el usuario la eliminó y no la queremos recrear
+                val categoryEntity = existingCategories.find { it.name == categoryName }
 
-                val categoryId = if (existingCategory != null) {
-                    existingCategory.id
-                } else {
-                    // Crear nueva categoría
+                val categoryId = if (categoryEntity != null) {
+                    // La categoría ya existe, usar su ID
+                    categoryEntity.id
+                } else if (categoryName !in existingCategoryNames) {
+                    // Es una categoría NUEVA del JSON, agregarla
                     db.categoryDao().insert(CategoryEntity(name = categoryName))
+                } else {
+                    // La categoría fue eliminada por el usuario, skip
+                    return@forEach
                 }
 
                 // Obtener palabras existentes de esta categoría
@@ -110,8 +118,8 @@ object DatabaseProvider {
                     .map { it.normalizedValue }
                     .toSet()
 
-                // Agregar solo palabras nuevas
-                words[categoryName]?.forEach { value ->
+                // Agregar solo palabras nuevas del JSON
+                wordsFromJson[categoryName]?.forEach { value ->
                     val normalized = value.trim().lowercase()
                     if (normalized !in existingWords) {
                         db.wordDao().insert(

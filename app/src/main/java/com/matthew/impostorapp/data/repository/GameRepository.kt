@@ -96,4 +96,17 @@ class GameRepository(
             Result.failure(e)
         }
     }
+
+    suspend fun deleteWord(categoryName: String, word: String): Result<Unit> {
+        return try {
+            val category = categoryDao.getByName(categoryName)
+                ?: return Result.failure(Exception("Categoría no encontrada"))
+
+            val normalized = word.trim().lowercase()
+            wordDao.deleteByValueAndCategory(normalized, category.id)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

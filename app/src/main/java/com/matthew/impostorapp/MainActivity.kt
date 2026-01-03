@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.matthew.impostorapp.data.local.db.DatabaseCleaner
 import com.matthew.impostorapp.data.local.db.DatabaseProvider
 import com.matthew.impostorapp.data.repository.GameRepository
 import com.matthew.impostorapp.domain.model.GameState
@@ -35,6 +36,9 @@ class MainActivity : ComponentActivity() {
             db.categoryDao(),
             db.wordDao()
         )
+
+        // LIMPIEZA ÚNICA: Comentar o eliminar después de ejecutar una vez
+        // DatabaseCleaner.cleanDuplicateCategories(this, db)
 
         val factory = GameViewModelFactory(repository)
 
@@ -135,7 +139,7 @@ class MainActivity : ComponentActivity() {
                                 viewModel.addWord(screen.category, word)
                             },
                             onDeleteWord = { word ->
-                                // Implementar eliminación de palabra
+                                viewModel.deleteWord(screen.category, word)
                             }
                         )
                     }
