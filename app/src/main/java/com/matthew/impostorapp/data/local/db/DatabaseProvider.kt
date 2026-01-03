@@ -18,8 +18,8 @@ object DatabaseProvider {
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // Incrementá este número cada vez que actualices los JSONs
-    private const val SEED_VERSION = 2
+    // Incrementar este número cada vez que se actualicen los JSONs manualmente
+    private const val SEED_VERSION = 1
 
     fun getDatabase(context: Context): AppDatabase {
         return INSTANCE ?: synchronized(this) {

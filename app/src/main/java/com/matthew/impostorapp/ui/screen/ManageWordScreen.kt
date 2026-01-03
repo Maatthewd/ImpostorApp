@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,7 +20,8 @@ fun ManageWordsScreen(
     words: List<String>,
     onBack: () -> Unit,
     onAddWord: (String) -> Unit,
-    onDeleteWord: (String) -> Unit
+    onDeleteWord: (String) -> Unit,
+    errorMessage: String? = null  // NUEVO parámetro
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
 
@@ -42,35 +42,80 @@ fun ManageWordsScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.padding(padding)
-        ) {
-            items(words) { word ->
+        Column(modifier = Modifier.padding(padding)) {
+
+            // NUEVO: Mostrar errores
+            if (errorMessage != null) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Text(
+                        text = errorMessage,
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+
+            // NUEVO: Mensaje si no hay palabras
+            if (words.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
-                            text = word,
-                            style = MaterialTheme.typography.bodyLarge
+                            "No hay palabras en esta categoría",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-
-                        IconButton(
-                            onClick = { onDeleteWord(word) }
+                        Text(
+                            "Tocá el botón + para agregar",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                LazyColumn {
+                    items(words) { word ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
                         ) {
-                            Icon(
-                                Icons.Default.Delete,
-                                "Eliminar",
-                                tint = MaterialTheme.colorScheme.error
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = word,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+
+                                IconButton(
+                                    onClick = { onDeleteWord(word) }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        "Eliminar",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
                         }
                     }
                 }

@@ -7,7 +7,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,11 +21,11 @@ fun ManageCategoriesScreen(
     onBack: () -> Unit,
     onAddCategory: (String) -> Unit,
     onDeleteCategory: (String, Boolean) -> Unit,
-    onManageWords: (String) -> Unit
+    onManageWords: (String) -> Unit,
+    errorMessage: String? = null  // NUEVO parámetro
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -47,6 +46,7 @@ fun ManageCategoriesScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
 
+            // NUEVO: Mostrar errores
             if (errorMessage != null) {
                 Card(
                     modifier = Modifier
@@ -57,7 +57,7 @@ fun ManageCategoriesScreen(
                     )
                 ) {
                     Text(
-                        text = errorMessage ?: "",
+                        text = errorMessage,
                         modifier = Modifier.padding(16.dp),
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )

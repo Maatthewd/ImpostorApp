@@ -4,19 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.matthew.impostorapp.data.local.db.DatabaseCleaner
 import com.matthew.impostorapp.data.local.db.DatabaseProvider
 import com.matthew.impostorapp.data.repository.GameRepository
 import com.matthew.impostorapp.domain.model.GameState
 import com.matthew.impostorapp.ui.screen.*
 import com.matthew.impostorapp.viewmodel.GameViewModel
-import com.matthew.impostorapp.ui.theme.ImpostorAppTheme
+import com.matthew.impostorapp.ui.theme.ImpostorAppTheme  // CORREGIDO
 import com.matthew.impostorapp.viewmodel.GameViewModelFactory
 
 sealed class Screen {
@@ -37,17 +32,16 @@ class MainActivity : ComponentActivity() {
             db.wordDao()
         )
 
-        // LIMPIEZA ÚNICA: Comentar o eliminar después de ejecutar una vez
-        // DatabaseCleaner.cleanDuplicateCategories(this, db)
-
         val factory = GameViewModelFactory(repository)
 
         setContent {
             val viewModel: GameViewModel = viewModel(factory = factory)
             val game by viewModel.game
+            val managementError by viewModel.managementError  // NUEVO
             var currentScreen by remember { mutableStateOf<Screen>(Screen.Lobby) }
 
-            MaterialTheme {
+            // CORREGIDO: Usar ImpostorAppTheme en vez de MaterialTheme
+            ImpostorAppTheme {
                 when (val screen = currentScreen) {
                     is Screen.Lobby -> {
                         when (val current = game) {
@@ -56,8 +50,11 @@ class MainActivity : ComponentActivity() {
                                     categories = viewModel.categoryList,
                                     onStartGame = { viewModel.setupGame(it) },
                                     onManageCategories = {
+                                        viewModel.clearError()  // NUEVO
                                         currentScreen = Screen.ManageCategories
-                                    }
+                                    },
+                                    getWordCount = { viewModel.getWordCount(it) },  // NUEVO
+                                    errorMessage = managementError  // NUEVO
                                 )
                             }
 
@@ -67,8 +64,11 @@ class MainActivity : ComponentActivity() {
                                         categories = viewModel.categoryList,
                                         onStartGame = { viewModel.setupGame(it) },
                                         onManageCategories = {
+                                            viewModel.clearError()  // NUEVO
                                             currentScreen = Screen.ManageCategories
-                                        }
+                                        },
+                                        getWordCount = { viewModel.getWordCount(it) },  // NUEVO
+                                        errorMessage = managementError  // NUEVO
                                     )
                                 }
 
@@ -90,7 +90,10 @@ class MainActivity : ComponentActivity() {
                                 GameState.ROUND_END -> {
                                     RoundEndScreen(
                                         onNextRound = { viewModel.nextRound() },
-                                        onConfig = { viewModel.onConfig() },
+                                        onConfig = {
+                                            viewModel.resetGame()  // CORREGIDO
+                                            currentScreen = Screen.Lobby
+                                        },
                                         onEndGame = { viewModel.endGame() }
                                     )
                                 }
@@ -100,15 +103,21 @@ class MainActivity : ComponentActivity() {
                                         categories = viewModel.categoryList,
                                         onStartGame = { viewModel.setupGame(it) },
                                         onManageCategories = {
+                                            viewModel.clearError()  // NUEVO
                                             currentScreen = Screen.ManageCategories
-                                        }
+                                        },
+                                        getWordCount = { viewModel.getWordCount(it) },  // NUEVO
+                                        errorMessage = managementError  // NUEVO
                                     )
                                 }
 
                                 GameState.GAME_OVER -> {
                                     GameOverScreen(
                                         totalRounds = viewModel.getTotalRounds(),
-                                        onRestart = { viewModel.resetGame() }
+                                        onRestart = {
+                                            viewModel.resetGame()
+                                            currentScreen = Screen.Lobby
+                                        }
                                     )
                                 }
                             }
@@ -118,15 +127,20 @@ class MainActivity : ComponentActivity() {
                     is Screen.ManageCategories -> {
                         ManageCategoriesScreen(
                             categories = viewModel.categoryList,
-                            onBack = { currentScreen = Screen.Lobby },
+                            onBack = {
+                                viewModel.clearError()  // NUEVO
+                                currentScreen = Screen.Lobby
+                            },
                             onAddCategory = { viewModel.addCategory(it) },
                             onDeleteCategory = { category, force ->
                                 viewModel.deleteCategory(category, force)
                             },
                             onManageWords = { category ->
+                                viewModel.clearError()  // NUEVO
                                 viewModel.loadWordsForCategory(category)
                                 currentScreen = Screen.ManageWords(category)
-                            }
+                            },
+                            errorMessage = managementError  // NUEVO
                         )
                     }
 
@@ -134,13 +148,17 @@ class MainActivity : ComponentActivity() {
                         ManageWordsScreen(
                             category = screen.category,
                             words = viewModel.wordsInCategory,
-                            onBack = { currentScreen = Screen.ManageCategories },
+                            onBack = {
+                                viewModel.clearError()  // NUEVO
+                                currentScreen = Screen.ManageCategories
+                            },
                             onAddWord = { word ->
                                 viewModel.addWord(screen.category, word)
                             },
                             onDeleteWord = { word ->
                                 viewModel.deleteWord(screen.category, word)
-                            }
+                            },
+                            errorMessage = managementError  // NUEVO
                         )
                     }
                 }

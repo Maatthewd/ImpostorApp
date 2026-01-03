@@ -44,6 +44,10 @@ class GameViewModel(
     private val _managementError = mutableStateOf<String?>(null)
     val managementError: State<String?> = _managementError
 
+    // NUEVO: Contador de palabras por categoría
+    private val _wordCountByCategory = mutableStateMapOf<String, Int>()
+    val wordCountByCategory: Map<String, Int> get() = _wordCountByCategory
+
     // =====================
     // INIT
     // =====================
@@ -56,6 +60,12 @@ class GameViewModel(
         viewModelScope.launch {
             _categories.clear()
             _categories.addAll(repository.getCategories())
+
+            // NUEVO: Cargar contadores
+            _categories.forEach { category ->
+                val count = repository.getWordsByCategory(category).size
+                _wordCountByCategory[category] = count
+            }
         }
     }
 
@@ -66,17 +76,31 @@ class GameViewModel(
     private var totalRounds = 0
 
     fun setupGame(config: GameConfig) {
-        currentConfig = config
-        currentRound = 1
-        usedWords.clear()
-
         viewModelScope.launch {
             wordBank.clear()
             wordBank.addAll(repository.getWords())
 
-            totalRounds = wordBank.count {
+            val eligibleWords = wordBank.filter {
                 it.matchesCategoryMode(config.categoryMode)
             }
+
+            // VALIDACIÓN: Verificar que hay palabras
+            if (eligibleWords.isEmpty()) {
+                _managementError.value = "Las categorías seleccionadas no tienen palabras"
+                return@launch
+            }
+
+            // VALIDACIÓN: Verificar mínimo de palabras
+            if (eligibleWords.size < 3) {
+                _managementError.value = "Necesitas al menos 3 palabras para jugar"
+                return@launch
+            }
+
+            currentConfig = config
+            currentRound = 1
+            usedWords.clear()
+
+            totalRounds = eligibleWords.size
 
             startRound()
         }
@@ -157,6 +181,7 @@ class GameViewModel(
                 onSuccess = {
                     _categories.clear()
                     _categories.addAll(repository.getCategories())
+                    _wordCountByCategory[name] = 0
                     _managementError.value = null
                 },
                 onFailure = { error ->
@@ -172,6 +197,7 @@ class GameViewModel(
                 onSuccess = {
                     _categories.clear()
                     _categories.addAll(repository.getCategories())
+                    _wordCountByCategory.remove(name)
                     _managementError.value = null
                 },
                 onFailure = { error ->
@@ -197,6 +223,8 @@ class GameViewModel(
             repository.addWord(categoryName, word).fold(
                 onSuccess = {
                     loadWordsForCategory(categoryName)
+                    _wordCountByCategory[categoryName] =
+                        (_wordCountByCategory[categoryName] ?: 0) + 1
                     _managementError.value = null
                 },
                 onFailure = { error ->
@@ -211,6 +239,8 @@ class GameViewModel(
             repository.deleteWord(categoryName, word).fold(
                 onSuccess = {
                     loadWordsForCategory(categoryName)
+                    _wordCountByCategory[categoryName] =
+                        maxOf(0, (_wordCountByCategory[categoryName] ?: 0) - 1)
                     _managementError.value = null
                 },
                 onFailure = { error ->
@@ -222,5 +252,10 @@ class GameViewModel(
 
     fun clearError() {
         _managementError.value = null
+    }
+
+    // NUEVO: Obtener cantidad de palabras por categoría
+    fun getWordCount(category: String): Int {
+        return _wordCountByCategory[category] ?: 0
     }
 }

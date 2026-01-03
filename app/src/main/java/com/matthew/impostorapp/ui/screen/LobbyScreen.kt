@@ -15,7 +15,9 @@ import com.matthew.impostorapp.domain.model.GameConfig
 fun LobbyScreen(
     categories: List<String>,
     onStartGame: (GameConfig) -> Unit,
-    onManageCategories: () -> Unit
+    onManageCategories: () -> Unit,
+    getWordCount: (String) -> Int = { 0 },  // NUEVO parámetro
+    errorMessage: String? = null  // NUEVO parámetro
 ) {
     var players by remember { mutableStateOf(6) }
     var impostors by remember { mutableStateOf(1) }
@@ -40,6 +42,22 @@ fun LobbyScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+
+            // NUEVO: Mostrar errores
+            if (errorMessage != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Text(
+                        text = errorMessage,
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
 
             // ===== JUGADORES =====
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -98,6 +116,8 @@ fun LobbyScreen(
                             modifier = Modifier.padding(top = 8.dp)
                         ) {
                             categories.forEach { category ->
+                                val wordCount = getWordCount(category)
+
                                 FilterChip(
                                     selected = category in selectedCategories,
                                     onClick = {
@@ -107,7 +127,10 @@ fun LobbyScreen(
                                             else
                                                 selectedCategories + category
                                     },
-                                    label = { Text(category) }
+                                    // NUEVO: Mostrar contador
+                                    label = { Text("$category ($wordCount)") },
+                                    // NUEVO: Deshabilitar si no tiene palabras
+                                    enabled = wordCount > 0
                                 )
                             }
                         }
