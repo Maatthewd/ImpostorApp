@@ -18,32 +18,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun wordDao(): WordDao
 
-    suspend fun preloadSeedIfNeeded(
-        context: Context,
-        db: AppDatabase
-    ) {
-        if (db.categoryDao().getAll().isNotEmpty()) return
-
-        val loader = SeedLoader(context)
-
-        val categories = loader.loadCategories()
-        val words = loader.loadWords()
-
-        categories.forEach { categoryName ->
-            val categoryId = db.categoryDao()
-                .insert(CategoryEntity(name = categoryName))
-
-            words[categoryName]?.forEach { value ->
-                db.wordDao().insert(
-                    WordEntity(
-                        value = value,
-                        normalizedValue = value.trim().lowercase(),
-                        categoryId = categoryId
-                    )
-                )
-            }
-        }
-    }
-
 
 }
