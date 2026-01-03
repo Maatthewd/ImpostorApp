@@ -29,7 +29,7 @@ fun RevealScreen(
             verticalArrangement = Arrangement.Center
         ) {
 
-            // RONDA - CORREGIDO: Quitamos el +1
+            // RONDA
 
             Text(
                 text = "Ronda $currentRound de $totalRounds",

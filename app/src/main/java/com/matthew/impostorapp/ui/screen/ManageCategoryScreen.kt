@@ -46,7 +46,7 @@ fun ManageCategoriesScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
 
-            // NUEVO: Mostrar errores
+            // Mostrar errores
             if (errorMessage != null) {
                 Card(
                     modifier = Modifier
@@ -100,7 +100,7 @@ fun ManageCategoriesScreen(
         }
     }
 
-    // Diálogo agregar categoría
+    // agregar categoría
     if (showAddDialog) {
         var newCategory by remember { mutableStateOf("") }
 
@@ -136,7 +136,7 @@ fun ManageCategoriesScreen(
         )
     }
 
-    // Diálogo eliminar categoría
+    // eliminar categoría
     showDeleteDialog?.let { category ->
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },

@@ -44,7 +44,7 @@ class GameViewModel(
     private val _managementError = mutableStateOf<String?>(null)
     val managementError: State<String?> = _managementError
 
-    // NUEVO: Contador de palabras por categoría
+    // Contador de palabras por categoría
     private val _wordCountByCategory = mutableStateMapOf<String, Int>()
     val wordCountByCategory: Map<String, Int> get() = _wordCountByCategory
 
@@ -61,7 +61,7 @@ class GameViewModel(
             _categories.clear()
             _categories.addAll(repository.getCategories())
 
-            // NUEVO: Cargar contadores
+            // Cargar contadores
             _categories.forEach { category ->
                 val count = repository.getWordsByCategory(category).size
                 _wordCountByCategory[category] = count
@@ -84,13 +84,13 @@ class GameViewModel(
                 it.matchesCategoryMode(config.categoryMode)
             }
 
-            // VALIDACIÓN: Verificar que hay palabras
+            // Verificar que hay palabras
             if (eligibleWords.isEmpty()) {
                 _managementError.value = "Las categorías seleccionadas no tienen palabras"
                 return@launch
             }
 
-            // VALIDACIÓN: Verificar mínimo de palabras
+            // Verificar mínimo de palabras
             if (eligibleWords.size < 3) {
                 _managementError.value = "Necesitas al menos 3 palabras para jugar"
                 return@launch
@@ -254,7 +254,7 @@ class GameViewModel(
         _managementError.value = null
     }
 
-    // NUEVO: Obtener cantidad de palabras por categoría
+    // Obtener cantidad de palabras por categoría
     fun getWordCount(category: String): Int {
         return _wordCountByCategory[category] ?: 0
     }

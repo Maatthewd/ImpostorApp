@@ -55,7 +55,7 @@ object DatabaseCleaner {
                             db.categoryDao().deleteById(duplicate.id)
                         }
 
-                        println("✅ Limpiada categoría duplicada: $name (${duplicates.size} duplicados eliminados)")
+                        println("Limpiada categoría duplicada: $name (${duplicates.size} duplicados eliminados)")
                     }
                 }
 
@@ -63,7 +63,7 @@ object DatabaseCleaner {
                 val prefs = context.getSharedPreferences("impostor_prefs", Context.MODE_PRIVATE)
                 prefs.edit().putInt("seed_version", 1).apply()
 
-                println("✅ Limpieza completada")
+                println("Limpieza completada")
 
             } catch (e: Exception) {
                 e.printStackTrace()

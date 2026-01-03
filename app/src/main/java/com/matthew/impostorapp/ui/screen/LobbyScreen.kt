@@ -43,7 +43,7 @@ fun LobbyScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
-            // NUEVO: Mostrar errores
+            // Mostrar errores
             if (errorMessage != null) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),

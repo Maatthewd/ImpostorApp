@@ -44,7 +44,7 @@ fun ManageWordsScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
 
-            // NUEVO: Mostrar errores
+            // Mostrar errores
             if (errorMessage != null) {
                 Card(
                     modifier = Modifier
@@ -62,7 +62,7 @@ fun ManageWordsScreen(
                 }
             }
 
-            // NUEVO: Mensaje si no hay palabras
+            // Mensaje si no hay palabras
             if (words.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -123,7 +123,7 @@ fun ManageWordsScreen(
         }
     }
 
-    // Diálogo agregar palabra
+    // agregar palabra
     if (showAddDialog) {
         var newWord by remember { mutableStateOf("") }
 
