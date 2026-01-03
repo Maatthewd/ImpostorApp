@@ -35,6 +35,16 @@ class GameViewModel(
     val categoryList: List<String> get() = _categories
 
     // =====================
+    // GESTIÓN DE PALABRAS
+    // =====================
+
+    private val _wordsInCategory = mutableStateListOf<String>()
+    val wordsInCategory: List<String> get() = _wordsInCategory
+
+    private val _managementError = mutableStateOf<String?>(null)
+    val managementError: State<String?> = _managementError
+
+    // =====================
     // INIT
     // =====================
 
@@ -54,6 +64,7 @@ class GameViewModel(
     // =====================
 
     private var totalRounds = 0
+
     fun setupGame(config: GameConfig) {
         currentConfig = config
         currentRound = 1
@@ -62,11 +73,12 @@ class GameViewModel(
         viewModelScope.launch {
             wordBank.clear()
             wordBank.addAll(repository.getWords())
-            startRound()
-        }
 
-        totalRounds = wordBank.count {
-            it.matchesCategoryMode(config.categoryMode)
+            totalRounds = wordBank.count {
+                it.matchesCategoryMode(config.categoryMode)
+            }
+
+            startRound()
         }
     }
 
@@ -133,7 +145,68 @@ class GameViewModel(
         wordBank.clear()
     }
 
-
     fun getTotalRounds(): Int = totalRounds
 
+    // =====================
+    // GESTIÓN DE CATEGORÍAS
+    // =====================
+
+    fun addCategory(name: String) {
+        viewModelScope.launch {
+            repository.addCategory(name).fold(
+                onSuccess = {
+                    _categories.clear()
+                    _categories.addAll(repository.getCategories())
+                    _managementError.value = null
+                },
+                onFailure = { error ->
+                    _managementError.value = error.message
+                }
+            )
+        }
+    }
+
+    fun deleteCategory(name: String, force: Boolean) {
+        viewModelScope.launch {
+            repository.deleteCategory(name, force).fold(
+                onSuccess = {
+                    _categories.clear()
+                    _categories.addAll(repository.getCategories())
+                    _managementError.value = null
+                },
+                onFailure = { error ->
+                    _managementError.value = error.message
+                }
+            )
+        }
+    }
+
+    // =====================
+    // GESTIÓN DE PALABRAS
+    // =====================
+
+    fun loadWordsForCategory(categoryName: String) {
+        viewModelScope.launch {
+            _wordsInCategory.clear()
+            _wordsInCategory.addAll(repository.getWordsByCategory(categoryName))
+        }
+    }
+
+    fun addWord(categoryName: String, word: String) {
+        viewModelScope.launch {
+            repository.addWord(categoryName, word).fold(
+                onSuccess = {
+                    loadWordsForCategory(categoryName)
+                    _managementError.value = null
+                },
+                onFailure = { error ->
+                    _managementError.value = error.message
+                }
+            )
+        }
+    }
+
+    fun clearError() {
+        _managementError.value = null
+    }
 }

@@ -6,6 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.matthew.impostorapp.data.local.db.DatabaseProvider
 import com.matthew.impostorapp.data.repository.GameRepository
@@ -14,6 +17,12 @@ import com.matthew.impostorapp.ui.screen.*
 import com.matthew.impostorapp.viewmodel.GameViewModel
 import com.matthew.impostorapp.ui.theme.ImpostorAppTheme
 import com.matthew.impostorapp.viewmodel.GameViewModelFactory
+
+sealed class Screen {
+    object Lobby : Screen()
+    object ManageCategories : Screen()
+    data class ManageWords(val category: String) : Screen()
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -32,65 +41,106 @@ class MainActivity : ComponentActivity() {
         setContent {
             val viewModel: GameViewModel = viewModel(factory = factory)
             val game by viewModel.game
-            MaterialTheme {
-                when (val current = game) {
+            var currentScreen by remember { mutableStateOf<Screen>(Screen.Lobby) }
 
-                    null -> {
-                        LobbyScreen(
+            MaterialTheme {
+                when (val screen = currentScreen) {
+                    is Screen.Lobby -> {
+                        when (val current = game) {
+                            null -> {
+                                LobbyScreen(
+                                    categories = viewModel.categoryList,
+                                    onStartGame = { viewModel.setupGame(it) },
+                                    onManageCategories = {
+                                        currentScreen = Screen.ManageCategories
+                                    }
+                                )
+                            }
+
+                            else -> when (current.state) {
+                                GameState.LOBBY -> {
+                                    LobbyScreen(
+                                        categories = viewModel.categoryList,
+                                        onStartGame = { viewModel.setupGame(it) },
+                                        onManageCategories = {
+                                            currentScreen = Screen.ManageCategories
+                                        }
+                                    )
+                                }
+
+                                GameState.REVEAL -> {
+                                    val player = current.players[current.currentPlayerIndex]
+
+                                    RevealScreen(
+                                        playerIndex = current.currentPlayerIndex,
+                                        totalPlayers = current.players.size,
+                                        role = player.role,
+                                        word = current.word.value,
+                                        category = current.word.category,
+                                        currentRound = current.round,
+                                        totalRounds = viewModel.getTotalRounds(),
+                                        onNext = { viewModel.nextPlayer() }
+                                    )
+                                }
+
+                                GameState.ROUND_END -> {
+                                    RoundEndScreen(
+                                        onNextRound = { viewModel.nextRound() },
+                                        onConfig = { viewModel.onConfig() },
+                                        onEndGame = { viewModel.endGame() }
+                                    )
+                                }
+
+                                GameState.CONFIG -> {
+                                    LobbyScreen(
+                                        categories = viewModel.categoryList,
+                                        onStartGame = { viewModel.setupGame(it) },
+                                        onManageCategories = {
+                                            currentScreen = Screen.ManageCategories
+                                        }
+                                    )
+                                }
+
+                                GameState.GAME_OVER -> {
+                                    GameOverScreen(
+                                        totalRounds = viewModel.getTotalRounds(),
+                                        onRestart = { viewModel.resetGame() }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    is Screen.ManageCategories -> {
+                        ManageCategoriesScreen(
                             categories = viewModel.categoryList,
-                            onStartGame = { viewModel.setupGame(it) }
+                            onBack = { currentScreen = Screen.Lobby },
+                            onAddCategory = { viewModel.addCategory(it) },
+                            onDeleteCategory = { category, force ->
+                                viewModel.deleteCategory(category, force)
+                            },
+                            onManageWords = { category ->
+                                viewModel.loadWordsForCategory(category)
+                                currentScreen = Screen.ManageWords(category)
+                            }
                         )
                     }
 
-                    else -> when (current.state) {
-
-                        GameState.LOBBY -> {
-                            LobbyScreen(
-                                categories = viewModel.categoryList,
-                                onStartGame = { viewModel.setupGame(it) }
-                            )
-                        }
-
-                        GameState.REVEAL -> {
-                            val player = current.players[current.currentPlayerIndex]
-
-                            RevealScreen(
-                                playerIndex = current.currentPlayerIndex,
-                                totalPlayers = current.players.size,
-                                role = player.role,
-                                word = current.word.value,
-                                category = current.word.category,
-                                currentRound = current.round,
-                                totalRounds = viewModel.getTotalRounds(),
-                                onNext = { viewModel.nextPlayer() }
-                            )
-                        }
-
-                        GameState.ROUND_END -> {
-                            RoundEndScreen(
-                                onNextRound = { viewModel.nextRound() },
-                                onConfig = { viewModel.onConfig() },
-                                onEndGame = { viewModel.endGame() }
-                            )
-                        }
-
-                        GameState.CONFIG -> {
-                            LobbyScreen(
-                                categories = viewModel.categoryList,
-                                onStartGame = { viewModel.setupGame(it) }
-                            )
-                        }
-
-                        GameState.GAME_OVER -> {
-                            GameOverScreen(
-                                totalRounds = viewModel.getTotalRounds(),
-                                onRestart = { viewModel.resetGame() }
-                            )
-                        }
+                    is Screen.ManageWords -> {
+                        ManageWordsScreen(
+                            category = screen.category,
+                            words = viewModel.wordsInCategory,
+                            onBack = { currentScreen = Screen.ManageCategories },
+                            onAddWord = { word ->
+                                viewModel.addWord(screen.category, word)
+                            },
+                            onDeleteWord = { word ->
+                                // Implementar eliminación de palabra
+                            }
+                        )
                     }
                 }
             }
-
         }
     }
 }

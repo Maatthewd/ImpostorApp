@@ -13,4 +13,10 @@ interface CategoryDao {
 
     @Insert
     suspend fun insert(category: CategoryEntity): Long
+
+    @Query("DELETE FROM categories WHERE id = :categoryId")
+    suspend fun deleteById(categoryId: Long)
+
+    @Query("SELECT * FROM categories WHERE name = :name LIMIT 1")
+    suspend fun getByName(name: String): CategoryEntity?
 }

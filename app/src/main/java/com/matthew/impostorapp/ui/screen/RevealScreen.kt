@@ -29,10 +29,10 @@ fun RevealScreen(
             verticalArrangement = Arrangement.Center
         ) {
 
-            // RONDA
+            // RONDA - CORREGIDO: Quitamos el +1
 
             Text(
-                text = "Ronda $currentRound de ${totalRounds + 1}",
+                text = "Ronda $currentRound de $totalRounds",
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium
             )

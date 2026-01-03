@@ -16,4 +16,13 @@ interface WordDao {
 
     @Insert
     suspend fun insert(word: WordEntity)
+
+    @Query("DELETE FROM words WHERE id = :wordId")
+    suspend fun deleteById(wordId: Long)
+
+    @Query("DELETE FROM words WHERE categoryId = :categoryId")
+    suspend fun deleteByCategory(categoryId: Long)
+
+    @Query("SELECT COUNT(*) FROM words WHERE categoryId = :categoryId")
+    suspend fun countByCategory(categoryId: Long): Int
 }
