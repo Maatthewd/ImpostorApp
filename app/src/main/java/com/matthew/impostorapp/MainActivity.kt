@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val viewModel: GameViewModel = viewModel(factory = factory)
             val game by viewModel.game
-            val managementError by viewModel.managementError  // NUEVO
+            val managementError by viewModel.managementError
             var currentScreen by remember { mutableStateOf<Screen>(Screen.Lobby) }
 
 

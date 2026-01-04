@@ -18,7 +18,6 @@ object DatabaseProvider {
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // Incrementar este número cada vez que se actualicen los JSONs manualmente
     private const val SEED_VERSION = 1
 
     fun getDatabase(context: Context): AppDatabase {
@@ -28,6 +27,7 @@ object DatabaseProvider {
                 AppDatabase::class.java,
                 "impostor_db"
             )
+                .fallbackToDestructiveMigration()  // ← LÍNEA CRÍTICA
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -45,7 +45,6 @@ object DatabaseProvider {
                             INSTANCE?.let { database ->
                                 val savedVersion = getSeedVersion(context)
                                 if (savedVersion < SEED_VERSION) {
-                                    // Hay nuevos datos en el JSON
                                     updateData(context, database)
                                     saveSeedVersion(context, SEED_VERSION)
                                 }
@@ -94,23 +93,19 @@ object DatabaseProvider {
             val existingCategories = db.categoryDao().getAll()
 
             categories.forEach { categoryName ->
-                // Buscar si la categoría ya existe
                 val existingCategory = existingCategories.find { it.name == categoryName }
 
                 val categoryId = if (existingCategory != null) {
                     existingCategory.id
                 } else {
-                    // Crear nueva categoría
                     db.categoryDao().insert(CategoryEntity(name = categoryName))
                 }
 
-                // Obtener palabras existentes de esta categoría
                 val existingWords = db.wordDao()
                     .getByCategory(categoryId)
                     .map { it.normalizedValue }
                     .toSet()
 
-                // Agregar solo palabras nuevas
                 words[categoryName]?.forEach { value ->
                     val normalized = value.trim().lowercase()
                     if (normalized !in existingWords) {
