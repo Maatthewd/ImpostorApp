@@ -1,11 +1,13 @@
 package com.matthew.impostorapp.viewmodel
 
+import android.util.Log
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.matthew.impostorapp.data.repository.GameRepository
 import com.matthew.impostorapp.domain.model.*
 import com.matthew.impostorapp.usecase.AssignRoleUseCase
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class GameViewModel(
@@ -53,7 +55,10 @@ class GameViewModel(
     // =====================
 
     init {
-        loadInitialData()
+        viewModelScope.launch {
+            delay(2000) // 2 segundos
+            loadInitialData()
+        }
     }
 
     private fun loadInitialData() {
@@ -66,6 +71,8 @@ class GameViewModel(
                 val count = repository.getWordsByCategory(category).size
                 _wordCountByCategory[category] = count
             }
+
+            Log.d("GameViewModel", "✅ Loaded ${_categories.size} categories")
         }
     }
 
