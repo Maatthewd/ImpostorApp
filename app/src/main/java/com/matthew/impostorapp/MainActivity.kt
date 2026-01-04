@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
             val managementError by viewModel.managementError  // NUEVO
             var currentScreen by remember { mutableStateOf<Screen>(Screen.Lobby) }
 
-            // CORREGIDO: Usar ImpostorAppTheme en vez de MaterialTheme
+
             ImpostorAppTheme {
                 when (val screen = currentScreen) {
                     is Screen.Lobby -> {
