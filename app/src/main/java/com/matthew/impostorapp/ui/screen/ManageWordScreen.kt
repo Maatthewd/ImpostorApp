@@ -21,7 +21,7 @@ fun ManageWordsScreen(
     onBack: () -> Unit,
     onAddWord: (String) -> Unit,
     onDeleteWord: (String) -> Unit,
-    errorMessage: String? = null  // NUEVO parámetro
+    errorMessage: String? = null
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
 

@@ -55,10 +55,7 @@ class GameViewModel(
     // =====================
 
     init {
-        viewModelScope.launch {
-            delay(2000) // 2 segundos
-            loadInitialData()
-        }
+        loadInitialData()
     }
 
     private fun loadInitialData() {
