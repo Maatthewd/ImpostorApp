@@ -22,7 +22,7 @@ fun ManageCategoriesScreen(
     onAddCategory: (String) -> Unit,
     onDeleteCategory: (String, Boolean) -> Unit,
     onManageWords: (String) -> Unit,
-    errorMessage: String? = null  // NUEVO parámetro
+    errorMessage: String? = null
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }

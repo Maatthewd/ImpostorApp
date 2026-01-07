@@ -188,7 +188,12 @@ class GameViewModel(
         val eligibleWords = wordBank.filter {
             it.matchesCategoryMode(newConfig.categoryMode)
         }
-        totalRounds = eligibleWords.size
+
+        val availableWords = eligibleWords.filter {
+            it.normalizedValue !in usedWords
+        }
+
+        totalRounds = (currentRound - 1) + availableWords.size
 
         // Iniciar la siguiente ronda con la nueva config
         startRound(newConfig)
