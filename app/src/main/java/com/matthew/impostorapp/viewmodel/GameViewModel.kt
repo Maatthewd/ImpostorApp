@@ -1,112 +1,173 @@
 package com.matthew.impostorapp.viewmodel
 
 import android.util.Log
-import androidx.compose.runtime.*
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.matthew.impostorapp.data.repository.GameRepository
 import com.matthew.impostorapp.domain.model.*
 import com.matthew.impostorapp.usecase.AssignRoleUseCase
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel profesional con manejo de estados reactivo usando Flow.
+ *
+ * Ventajas de este enfoque:
+ * - Los datos se actualizan automáticamente cuando cambia la BD
+ * - No hay race conditions con el seed inicial
+ * - Separación clara entre estado de UI y estado de datos
+ * - Más fácil de testear
+ */
 class GameViewModel(
     private val repository: GameRepository
 ) : ViewModel() {
 
     private val assignRoleUseCase = AssignRoleUseCase()
 
+    // =====================
+    // ESTADO DEL JUEGO
+    // =====================
+
     private val _game = mutableStateOf<Game?>(null)
     val game: State<Game?> = _game
 
-    // =====================
-    // ESTADO DE CONFIG
-    // =====================
-
     private var currentRound = 1
     private var currentConfig: GameConfig? = null
+    private var totalRounds = 0
 
     // =====================
-    // BANCO DE PARTIDA
+    // BANCO DE PALABRAS
     // =====================
 
-    private val wordBank = mutableStateListOf<Word>()
+    private val wordBank = mutableListOf<Word>()
     private val usedWords = mutableSetOf<String>()
 
-    private val _categories = mutableStateListOf<String>()
-    val categoryList: List<String> get() = _categories
-
     // =====================
-    // GESTIÓN DE PALABRAS
+    // ESTADO DE UI - Reactivo con Flow
     // =====================
 
-    private val _wordsInCategory = mutableStateListOf<String>()
-    val wordsInCategory: List<String> get() = _wordsInCategory
+    /**
+     * StateFlow para categorías. Se actualiza automáticamente
+     * cuando hay cambios en la base de datos.
+     */
+    private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private val _managementError = mutableStateOf<String?>(null)
-    val managementError: State<String?> = _managementError
+    /**
+     * Flow de categorías que se actualiza automáticamente
+     */
+    val categories: StateFlow<List<String>> = repository
+        .observeCategories()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
-    // Contador de palabras por categoría
-    private val _wordCountByCategory = mutableStateMapOf<String, Int>()
-    val wordCountByCategory: Map<String, Int> get() = _wordCountByCategory
+    /**
+     * Map de conteo de palabras por categoría
+     */
+    private val _wordCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val wordCounts: StateFlow<Map<String, Int>> = _wordCounts.asStateFlow()
+
+    /**
+     * Palabras de la categoría actualmente seleccionada
+     */
+    private val _currentCategoryWords = MutableStateFlow<List<String>>(emptyList())
+    val currentCategoryWords: StateFlow<List<String>> = _currentCategoryWords.asStateFlow()
+
+    /**
+     * Error de gestión (agregar/eliminar categorías/palabras)
+     */
+    private val _managementError = MutableStateFlow<String?>(null)
+    val managementError: StateFlow<String?> = _managementError.asStateFlow()
 
     // =====================
     // INIT
     // =====================
 
     init {
-        loadInitialData()
+        observeCategoryChanges()
+        checkInitialState()
     }
 
-    private fun loadInitialData() {
+    /**
+     * Observa cambios en categorías y actualiza contadores
+     */
+    private fun observeCategoryChanges() {
         viewModelScope.launch {
-            _categories.clear()
-            _categories.addAll(repository.getCategories())
+            categories.collect { categoryList ->
+                // Actualizar contadores cuando cambian las categorías
+                val counts = mutableMapOf<String, Int>()
+                categoryList.forEach { category ->
+                    counts[category] = repository.getWordCount(category)
+                }
+                _wordCounts.value = counts
 
-            // Cargar contadores
-            _categories.forEach { category ->
-                val count = repository.getWordsByCategory(category).size
-                _wordCountByCategory[category] = count
+                // Actualizar estado UI
+                if (categoryList.isEmpty()) {
+                    _uiState.value = UiState.Empty
+                } else {
+                    _uiState.value = UiState.Success
+                }
             }
+        }
+    }
 
-            Log.d("GameViewModel", "✅ Loaded ${_categories.size} categories")
+    /**
+     * Verifica el estado inicial de la BD
+     */
+    private fun checkInitialState() {
+        viewModelScope.launch {
+            _uiState.value = UiState.Loading
+            // El Flow de categories se encargará del resto
         }
     }
 
     // =====================
-    // JUEGO
+    // LÓGICA DE JUEGO
     // =====================
-
-    private var totalRounds = 0
 
     fun setupGame(config: GameConfig) {
         viewModelScope.launch {
-            wordBank.clear()
-            wordBank.addAll(repository.getWords())
+            try {
+                _uiState.value = UiState.Loading
 
-            val eligibleWords = wordBank.filter {
-                it.matchesCategoryMode(config.categoryMode)
+                wordBank.clear()
+                wordBank.addAll(repository.getWords())
+
+                val eligibleWords = wordBank.filter {
+                    it.matchesCategoryMode(config.categoryMode)
+                }
+
+                when {
+                    eligibleWords.isEmpty() -> {
+                        _managementError.value = "Las categorías seleccionadas no tienen palabras"
+                        _uiState.value = UiState.Success
+                        return@launch
+                    }
+                    eligibleWords.size < 3 -> {
+                        _managementError.value = "Necesitas al menos 3 palabras para jugar"
+                        _uiState.value = UiState.Success
+                        return@launch
+                    }
+                }
+
+                currentConfig = config
+                currentRound = 1
+                usedWords.clear()
+                totalRounds = eligibleWords.size
+
+                startRound()
+                _uiState.value = UiState.Success
+
+            } catch (e: Exception) {
+                Log.e("GameViewModel", "Error al configurar juego", e)
+                _managementError.value = "Error al iniciar el juego: ${e.message}"
+                _uiState.value = UiState.Error(e.message ?: "Error desconocido")
             }
-
-            // Verificar que hay palabras
-            if (eligibleWords.isEmpty()) {
-                _managementError.value = "Las categorías seleccionadas no tienen palabras"
-                return@launch
-            }
-
-            // Verificar mínimo de palabras
-            if (eligibleWords.size < 3) {
-                _managementError.value = "Necesitas al menos 3 palabras para jugar"
-                return@launch
-            }
-
-            currentConfig = config
-            currentRound = 1
-            usedWords.clear()
-
-            totalRounds = eligibleWords.size
-
-            startRound()
         }
     }
 
@@ -144,12 +205,11 @@ class GameViewModel(
         val game = _game.value ?: return
         val next = game.currentPlayerIndex + 1
 
-        _game.value =
-            if (next >= game.players.size) {
-                game.copy(state = GameState.ROUND_END)
-            } else {
-                game.copy(currentPlayerIndex = next)
-            }
+        _game.value = if (next >= game.players.size) {
+            game.copy(state = GameState.ROUND_END)
+        } else {
+            game.copy(currentPlayerIndex = next)
+        }
     }
 
     fun nextRound() {
@@ -159,10 +219,6 @@ class GameViewModel(
 
     fun endGame() {
         _game.value = _game.value?.copy(state = GameState.GAME_OVER)
-    }
-
-    fun onConfig() {
-        _game.value = _game.value?.copy(state = GameState.CONFIG)
     }
 
     fun resetGame() {
@@ -181,12 +237,11 @@ class GameViewModel(
 
     fun addCategory(name: String) {
         viewModelScope.launch {
+            _managementError.value = null
             repository.addCategory(name).fold(
                 onSuccess = {
-                    _categories.clear()
-                    _categories.addAll(repository.getCategories())
-                    _wordCountByCategory[name] = 0
-                    _managementError.value = null
+                    // El Flow se actualiza automáticamente
+                    Log.d("GameViewModel", "Categoría agregada: $name")
                 },
                 onFailure = { error ->
                     _managementError.value = error.message
@@ -197,12 +252,11 @@ class GameViewModel(
 
     fun deleteCategory(name: String, force: Boolean) {
         viewModelScope.launch {
+            _managementError.value = null
             repository.deleteCategory(name, force).fold(
                 onSuccess = {
-                    _categories.clear()
-                    _categories.addAll(repository.getCategories())
-                    _wordCountByCategory.remove(name)
-                    _managementError.value = null
+                    // El Flow se actualiza automáticamente
+                    Log.d("GameViewModel", "Categoría eliminada: $name")
                 },
                 onFailure = { error ->
                     _managementError.value = error.message
@@ -217,19 +271,24 @@ class GameViewModel(
 
     fun loadWordsForCategory(categoryName: String) {
         viewModelScope.launch {
-            _wordsInCategory.clear()
-            _wordsInCategory.addAll(repository.getWordsByCategory(categoryName))
+            repository.observeWordsByCategory(categoryName)
+                .collect { words ->
+                    _currentCategoryWords.value = words
+                }
         }
     }
 
     fun addWord(categoryName: String, word: String) {
         viewModelScope.launch {
+            _managementError.value = null
             repository.addWord(categoryName, word).fold(
                 onSuccess = {
-                    loadWordsForCategory(categoryName)
-                    _wordCountByCategory[categoryName] =
-                        (_wordCountByCategory[categoryName] ?: 0) + 1
-                    _managementError.value = null
+                    // Actualizar contador
+                    val currentCounts = _wordCounts.value.toMutableMap()
+                    currentCounts[categoryName] = (currentCounts[categoryName] ?: 0) + 1
+                    _wordCounts.value = currentCounts
+
+                    Log.d("GameViewModel", "Palabra agregada: $word en $categoryName")
                 },
                 onFailure = { error ->
                     _managementError.value = error.message
@@ -240,12 +299,15 @@ class GameViewModel(
 
     fun deleteWord(categoryName: String, word: String) {
         viewModelScope.launch {
+            _managementError.value = null
             repository.deleteWord(categoryName, word).fold(
                 onSuccess = {
-                    loadWordsForCategory(categoryName)
-                    _wordCountByCategory[categoryName] =
-                        maxOf(0, (_wordCountByCategory[categoryName] ?: 0) - 1)
-                    _managementError.value = null
+                    // Actualizar contador
+                    val currentCounts = _wordCounts.value.toMutableMap()
+                    currentCounts[categoryName] = maxOf(0, (currentCounts[categoryName] ?: 0) - 1)
+                    _wordCounts.value = currentCounts
+
+                    Log.d("GameViewModel", "Palabra eliminada: $word de $categoryName")
                 },
                 onFailure = { error ->
                     _managementError.value = error.message
@@ -258,8 +320,17 @@ class GameViewModel(
         _managementError.value = null
     }
 
-    // Obtener cantidad de palabras por categoría
     fun getWordCount(category: String): Int {
-        return _wordCountByCategory[category] ?: 0
+        return _wordCounts.value[category] ?: 0
     }
+}
+
+/**
+ * Estados de la UI para manejar loading, empty, success y error
+ */
+sealed class UiState {
+    object Loading : UiState()
+    object Empty : UiState()
+    object Success : UiState()
+    data class Error(val message: String) : UiState()
 }
