@@ -16,8 +16,8 @@ fun LobbyScreen(
     categories: List<String>,
     onStartGame: (GameConfig) -> Unit,
     onManageCategories: () -> Unit,
-    getWordCount: (String) -> Int = { 0 },  // NUEVO parámetro
-    errorMessage: String? = null  // NUEVO parámetro
+    getWordCount: (String) -> Int = { 0 },
+    errorMessage: String? = null
 ) {
     var players by remember { mutableStateOf(6) }
     var impostors by remember { mutableStateOf(1) }

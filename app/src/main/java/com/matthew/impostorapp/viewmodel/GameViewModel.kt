@@ -49,13 +49,6 @@ class GameViewModel(
     // =====================
 
     /**
-     * StateFlow para categorías. Se actualiza automáticamente
-     * cuando hay cambios en la base de datos.
-     */
-    private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
-    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
-
-    /**
      * Flow de categorías que se actualiza automáticamente
      */
     val categories: StateFlow<List<String>> = repository
@@ -64,6 +57,22 @@ class GameViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
+        )
+
+    /**
+     * Estado de UI derivado de las categorías
+     */
+    val uiState: StateFlow<UiState> = categories
+        .map { categoryList ->
+            when {
+                categoryList.isEmpty() -> UiState.Empty
+                else -> UiState.Success
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = UiState.Loading
         )
 
     /**
@@ -90,7 +99,6 @@ class GameViewModel(
 
     init {
         observeCategoryChanges()
-        checkInitialState()
     }
 
     /**
@@ -99,30 +107,16 @@ class GameViewModel(
     private fun observeCategoryChanges() {
         viewModelScope.launch {
             categories.collect { categoryList ->
+                Log.d("GameViewModel", "📊 Categories changed: ${categoryList.size}")
                 // Actualizar contadores cuando cambian las categorías
                 val counts = mutableMapOf<String, Int>()
                 categoryList.forEach { category ->
-                    counts[category] = repository.getWordCount(category)
+                    val count = repository.getWordCount(category)
+                    counts[category] = count
+                    Log.d("GameViewModel", "  - $category: $count words")
                 }
                 _wordCounts.value = counts
-
-                // Actualizar estado UI
-                if (categoryList.isEmpty()) {
-                    _uiState.value = UiState.Empty
-                } else {
-                    _uiState.value = UiState.Success
-                }
             }
-        }
-    }
-
-    /**
-     * Verifica el estado inicial de la BD
-     */
-    private fun checkInitialState() {
-        viewModelScope.launch {
-            _uiState.value = UiState.Loading
-            // El Flow de categories se encargará del resto
         }
     }
 
@@ -133,8 +127,6 @@ class GameViewModel(
     fun setupGame(config: GameConfig) {
         viewModelScope.launch {
             try {
-                _uiState.value = UiState.Loading
-
                 wordBank.clear()
                 wordBank.addAll(repository.getWords())
 
@@ -145,12 +137,10 @@ class GameViewModel(
                 when {
                     eligibleWords.isEmpty() -> {
                         _managementError.value = "Las categorías seleccionadas no tienen palabras"
-                        _uiState.value = UiState.Success
                         return@launch
                     }
                     eligibleWords.size < 3 -> {
                         _managementError.value = "Necesitas al menos 3 palabras para jugar"
-                        _uiState.value = UiState.Success
                         return@launch
                     }
                 }
@@ -161,12 +151,10 @@ class GameViewModel(
                 totalRounds = eligibleWords.size
 
                 startRound()
-                _uiState.value = UiState.Success
 
             } catch (e: Exception) {
                 Log.e("GameViewModel", "Error al configurar juego", e)
                 _managementError.value = "Error al iniciar el juego: ${e.message}"
-                _uiState.value = UiState.Error(e.message ?: "Error desconocido")
             }
         }
     }
@@ -237,13 +225,15 @@ class GameViewModel(
 
     fun addCategory(name: String) {
         viewModelScope.launch {
+            Log.d("GameViewModel", "➕ Adding category: $name")
             _managementError.value = null
             repository.addCategory(name).fold(
                 onSuccess = {
+                    Log.d("GameViewModel", "✅ Category added successfully: $name")
                     // El Flow se actualiza automáticamente
-                    Log.d("GameViewModel", "Categoría agregada: $name")
                 },
                 onFailure = { error ->
+                    Log.e("GameViewModel", "❌ Error adding category: ${error.message}")
                     _managementError.value = error.message
                 }
             )
@@ -252,13 +242,15 @@ class GameViewModel(
 
     fun deleteCategory(name: String, force: Boolean) {
         viewModelScope.launch {
+            Log.d("GameViewModel", "🗑️ Deleting category: $name (force=$force)")
             _managementError.value = null
             repository.deleteCategory(name, force).fold(
                 onSuccess = {
+                    Log.d("GameViewModel", "✅ Category deleted successfully: $name")
                     // El Flow se actualiza automáticamente
-                    Log.d("GameViewModel", "Categoría eliminada: $name")
                 },
                 onFailure = { error ->
+                    Log.e("GameViewModel", "❌ Error deleting category: ${error.message}")
                     _managementError.value = error.message
                 }
             )

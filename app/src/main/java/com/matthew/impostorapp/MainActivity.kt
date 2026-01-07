@@ -19,7 +19,6 @@ import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.matthew.impostorapp.domain.model.Game
 
 sealed class Screen {
     object Lobby : Screen()
@@ -47,7 +46,6 @@ class MainActivity : ComponentActivity() {
 
             // Observar estados reactivos
             val game by viewModel.game
-            val uiState by viewModel.uiState.collectAsState()
             val categories by viewModel.categories.collectAsState()
             val wordCounts by viewModel.wordCounts.collectAsState()
             val managementError by viewModel.managementError.collectAsState()
@@ -56,47 +54,18 @@ class MainActivity : ComponentActivity() {
             var currentScreen by remember { mutableStateOf<Screen>(Screen.Lobby) }
 
             ImpostorAppTheme {
-                // Mostrar loading mientras se inicializa la BD
-                when (uiState) {
-                    is UiState.Loading -> {
-                        LoadingScreen()
-                    }
-                    else -> {
-                        MainContent(
-                            viewModel = viewModel,
-                            game = game,
-                            categories = categories,
-                            wordCounts = wordCounts,
-                            currentCategoryWords = currentCategoryWords,
-                            managementError = managementError,
-                            currentScreen = currentScreen,
-                            onScreenChange = { currentScreen = it }
-                        )
-                    }
-                }
+                // La UI reacciona automáticamente cuando los datos están listos
+                MainContent(
+                    viewModel = viewModel,
+                    game = game,
+                    categories = categories,
+                    wordCounts = wordCounts,
+                    currentCategoryWords = currentCategoryWords,
+                    managementError = managementError,
+                    currentScreen = currentScreen,
+                    onScreenChange = { currentScreen = it }
+                )
             }
-        }
-    }
-}
-
-@Composable
-fun LoadingScreen() {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            CircularProgressIndicator()
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Cargando datos...",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground
-            )
         }
     }
 }
@@ -105,7 +74,7 @@ fun LoadingScreen() {
 @Composable
 fun MainContent(
     viewModel: GameViewModel,
-    game: Game?,
+    game: com.matthew.impostorapp.domain.model.Game?,
     categories: List<String>,
     wordCounts: Map<String, Int>,
     currentCategoryWords: List<String>,

@@ -12,17 +12,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import java.util.concurrent.CountDownLatch
 
 /**
- * Proveedor singleton de la base de datos con inicialización garantizada.
+ * Proveedor singleton de la base de datos con inicialización asíncrona.
  *
- * Este archivo:
- * - Usa CountDownLatch para garantizar que el seed termine antes de continuar
- * - Maneja versiones de seed para actualizaciones incrementales
- * - Logs claros para debugging
- * - Manejo robusto de errores
+ * Enfoque profesional sin bloqueos:
+ * - La BD se crea inmediatamente
+ * - El seed corre en background
+ * - El ViewModel usa Flow para reaccionar cuando los datos estén listos
  */
 object DatabaseProvider {
     @Volatile
@@ -35,27 +32,17 @@ object DatabaseProvider {
     private const val DB_NAME = "impostor_db"
 
     /**
-     * CountDownLatch para garantizar que el seed inicial termine
-     * antes de que la app intente usar la BD
-     */
-    @Volatile
-    private var seedLatch: CountDownLatch? = null
-
-    /**
      * Obtiene la instancia de la base de datos.
-     * GARANTIZA que el seed inicial esté completo antes de retornar.
+     * Retorna inmediatamente, el seed corre en background.
      */
     fun getDatabase(context: Context): AppDatabase {
         return INSTANCE ?: synchronized(this) {
             val instance = INSTANCE
             if (instance != null) {
-                // Si ya existe, asegurarse de que el seed haya terminado
-                seedLatch?.await()
                 return@synchronized instance
             }
 
-            // Crear nuevo latch para esta inicialización
-            seedLatch = CountDownLatch(1)
+            Log.d(TAG, "🔵 Creating database instance")
 
             val newInstance = Room.databaseBuilder(
                 context.applicationContext,
@@ -63,15 +50,11 @@ object DatabaseProvider {
                 DB_NAME
             )
                 .fallbackToDestructiveMigration()
-                .addCallback(DatabaseCallback(context))
+                .addCallback(DatabaseCallback(context.applicationContext))
                 .build()
 
             INSTANCE = newInstance
-
-            // Esperar a que el seed inicial termine
-            // Esto evita que la app intente leer antes de que existan datos
-            seedLatch?.await()
-            Log.d(TAG, "✅ Database ready to use")
+            Log.d(TAG, "✅ Database instance created")
 
             newInstance
         }
@@ -88,7 +71,7 @@ object DatabaseProvider {
             super.onCreate(db)
             Log.d(TAG, "🟢 onCreate - First time database creation")
 
-            // Ejecutar seed en background pero bloquear hasta que termine
+            // Ejecutar seed en background (no bloquea)
             applicationScope.launch {
                 try {
                     INSTANCE?.let { database ->
@@ -97,9 +80,6 @@ object DatabaseProvider {
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "❌ Error in onCreate seed", e)
-                } finally {
-                    // Liberar el latch para que getDatabase pueda continuar
-                    seedLatch?.countDown()
                 }
             }
         }
@@ -108,14 +88,20 @@ object DatabaseProvider {
             super.onOpen(db)
             Log.d(TAG, "🟡 onOpen - Database opened")
 
-            // Si no hay latch, la BD ya estaba creada
-            val latch = seedLatch
-            if (latch == null || latch.count == 0L) {
-                // Verificar si necesita actualización
-                applicationScope.launch {
+            // Solo verificar actualizaciones si la BD ya existía
+            applicationScope.launch {
+                try {
                     INSTANCE?.let { database ->
-                        checkAndUpdateSeed(appContext, database)
+                        val savedVersion = getSeedVersion(appContext)
+                        // Solo actualizar si ya hay una versión guardada (BD no es nueva)
+                        if (savedVersion > 0) {
+                            checkAndUpdateSeed(appContext, database)
+                        } else {
+                            Log.d(TAG, "⏭️ Skipping onOpen check - onCreate will handle seed")
+                        }
                     }
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Error in onOpen check", e)
                 }
             }
         }
@@ -289,7 +275,6 @@ object DatabaseProvider {
     fun closeDatabase() {
         INSTANCE?.close()
         INSTANCE = null
-        seedLatch = null
         Log.d(TAG, "🔴 Database closed")
     }
 }

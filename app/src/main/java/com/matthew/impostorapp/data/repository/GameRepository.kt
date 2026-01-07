@@ -1,5 +1,6 @@
 package com.matthew.impostorapp.data.repository
 
+import android.util.Log
 import com.matthew.impostorapp.data.local.dao.CategoryDao
 import com.matthew.impostorapp.data.local.dao.WordDao
 import com.matthew.impostorapp.data.local.entity.CategoryEntity
@@ -24,7 +25,9 @@ class GameRepository(
      */
     fun observeCategories(): Flow<List<String>> =
         categoryDao.observeAll().map { entities ->
-            entities.map { it.name }
+            entities.map { it.name }.also { names ->
+                Log.d("GameRepository", "📊 Categories emitted: ${names.size} - $names")
+            }
         }
 
     /**
