@@ -6,5 +6,6 @@ data class Game(
     val currentPlayerIndex: Int,
     val state: GameState,
     val config: GameConfig,
-    val round: Int
+    val round: Int,
+    val usedWords: Set<String> = emptySet()
 )

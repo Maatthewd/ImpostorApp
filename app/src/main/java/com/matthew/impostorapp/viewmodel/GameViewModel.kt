@@ -16,9 +16,6 @@ import kotlinx.coroutines.launch
  *
  *
  * - Los datos se actualizan automáticamente cuando cambia la BD
- * - No hay race conditions con el seed inicial
- * - Separación clara entre estado de UI y estado de datos
- * - Fácil de testear
  */
 class GameViewModel(
     private val repository: GameRepository
@@ -36,6 +33,8 @@ class GameViewModel(
     private var currentRound = 1
     private var currentConfig: GameConfig? = null
     private var totalRounds = 0
+
+    private var savedGameState: SavedStateGame? = null
 
     // =====================
     // BANCO DE PALABRAS
@@ -127,30 +126,16 @@ class GameViewModel(
     fun setupGame(config: GameConfig) {
         viewModelScope.launch {
             try {
-                wordBank.clear()
-                wordBank.addAll(repository.getWords())
 
-                val eligibleWords = wordBank.filter {
-                    it.matchesCategoryMode(config.categoryMode)
+                val saved = savedGameState
+
+                if(saved != null && areConfigsCompatible(saved.config, config)) {
+                    restoreGameState(saved, config)
+                    return@launch
                 }
 
-                when {
-                    eligibleWords.isEmpty() -> {
-                        _managementError.value = "Las categorías seleccionadas no tienen palabras"
-                        return@launch
-                    }
-                    eligibleWords.size < 3 -> {
-                        _managementError.value = "Necesitas al menos 3 palabras para jugar"
-                        return@launch
-                    }
-                }
-
-                currentConfig = config
-                currentRound = 1
-                usedWords.clear()
-                totalRounds = eligibleWords.size
-
-                startRound()
+                Log.d("GameViewModel", "Nueva configuración, empezando desde cero")
+                startNewGame(config)
 
             } catch (e: Exception) {
                 Log.e("GameViewModel", "Error al configurar juego", e)
@@ -159,9 +144,80 @@ class GameViewModel(
         }
     }
 
-    private fun startRound() {
-        val config = currentConfig ?: return
+    private suspend fun startNewGame(config: GameConfig){
+        wordBank.clear()
+        wordBank.addAll(repository.getWords())
 
+        val eligibleWords = wordBank.filter {
+            it.matchesCategoryMode(config.categoryMode)
+        }
+
+        when{
+            eligibleWords.isEmpty() -> {
+                _managementError.value = "Las categorias seleccionadas no tienen palabras"
+                return
+            }
+            eligibleWords.size < 3 -> {
+                _managementError.value = "Necesitas al menos 3 palabras para jugar"
+                return
+            }
+        }
+
+        currentRound = 1
+        usedWords.clear()
+        totalRounds = eligibleWords.size
+        savedGameState = null
+
+        startRound(config)
+
+    }
+
+    private suspend fun restoreGameState(saved: SavedStateGame, newConfig: GameConfig) {
+        // Actualizar banco de palabras
+        wordBank.clear()
+        wordBank.addAll(repository.getWords())
+
+        // Restaurar palabras usadas
+        usedWords.clear()
+        usedWords.addAll(saved.usedWords)
+
+        // Restaurar configuracion ( con posibles cambios del usuario)
+        currentRound = saved.currentRound
+
+        // Recalcular totalRounds basado en la nueva configuracion
+        val eligibleWords = wordBank.filter {
+            it.matchesCategoryMode(newConfig.categoryMode)
+        }
+        totalRounds = eligibleWords.size
+
+        // Iniciar la siguiente ronda con la nueva config
+        startRound(newConfig)
+
+    }
+
+    private fun areConfigsCompatible(old: GameConfig, new: GameConfig): Boolean {
+
+        // Las configs son compatibles si las categorías se solapan
+        val oldCategories = when (old.categoryMode) {
+            is CategoryMode.Single -> setOf(old.categoryMode.category)
+            is CategoryMode.Multiple -> old.categoryMode.categories
+            is CategoryMode.Mixed -> emptySet()
+        }
+
+        val newCategories = when (new.categoryMode) {
+            is CategoryMode.Single -> setOf(new.categoryMode.category)
+            is CategoryMode.Multiple -> new.categoryMode.categories
+            is CategoryMode.Mixed -> emptySet()
+        }
+
+        // Si alguna es Mixed, son compatibles
+        if(oldCategories.isEmpty() || newCategories.isEmpty()) return true
+
+        // Verificar que haya al menos una categoría en común
+        return oldCategories.intersect(newCategories).isNotEmpty()
+    }
+
+    private fun startRound(config: GameConfig) {
         val eligibleWords = wordBank
             .filter { it.matchesCategoryMode(config.categoryMode) }
             .filter { it.normalizedValue !in usedWords }
@@ -185,7 +241,8 @@ class GameViewModel(
             currentPlayerIndex = 0,
             state = GameState.REVEAL,
             config = config,
-            round = currentRound
+            round = currentRound,
+            usedWords = usedWords.toSet()
         )
     }
 
@@ -202,22 +259,57 @@ class GameViewModel(
 
     fun nextRound() {
         currentRound++
-        startRound()
+        val currentGame = _game.value?: return
+        startRound(currentGame.config)
     }
 
     fun endGame() {
         _game.value = _game.value?.copy(state = GameState.GAME_OVER)
     }
 
+    /**
+    * Guarda el estado actual y cambia a modo configuracion
+    */
+    fun goToConfig() {
+        val currentGame = _game.value?: return
+
+        savedGameState = SavedStateGame(
+            config = currentGame.config,
+            currentRound = currentRound,
+            usedWords = currentGame.usedWords,
+            totalRounds = totalRounds,
+        )
+
+        Log.d("GameViewModel", "Estado guardado: Round $currentRound, ${usedWords.size} palabras usadas")
+
+        _game.value = currentGame.copy(state = GameState.CONFIG)
+    }
+
+    /**
+     * Reset completo (volver al lobby sin guardar nada)
+     */
     fun resetGame() {
         _game.value = null
-        currentConfig = null
+        savedGameState = null
         currentRound = 1
         usedWords.clear()
         wordBank.clear()
     }
 
+    /**
+     * Obtiene la configuración guardada
+     */
+    fun getSavedConfig(): GameConfig? = savedGameState?.config
+
+    /**
+     * Verifica si hay un estado guardado
+     */
+    fun hasSavedState(): Boolean = savedGameState != null
     fun getTotalRounds(): Int = totalRounds
+
+    fun getCurrentRound(): Int = currentRound
+
+    fun getUsedWordsCount(): Int = usedWords.size
 
     // =====================
     // GESTIÓN DE CATEGORÍAS

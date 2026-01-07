@@ -9,6 +9,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun RoundEndScreen(
+    currentRound: Int,
+    totalRounds: Int,
     onNextRound: () -> Unit,
     onConfig: () -> Unit,
     onEndGame: () -> Unit
@@ -21,10 +23,18 @@ fun RoundEndScreen(
     ) {
 
         Text(
-            text = "Fin de ronda",
+            text = "Fin de ronda $currentRound",
             style = MaterialTheme.typography.headlineLarge,
             color = Color.White
         )
+
+        Text(
+            text = "Quedan ${totalRounds - currentRound} rondas",
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.Gray
+        )
+
+        Spacer(Modifier.height(16.dp))
 
         Button(
             onClick = onNextRound,
@@ -37,12 +47,15 @@ fun RoundEndScreen(
             onClick = onConfig,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Configurar")
+            Text("Cambiar configuración")
         }
 
         OutlinedButton(
             onClick = onEndGame,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error
+            )
         ) {
             Text("Finalizar Juego")
         }

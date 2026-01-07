@@ -1,6 +1,8 @@
 package com.matthew.impostorapp.ui.screen
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,11 +21,29 @@ fun LobbyScreen(
     onStartGame: (GameConfig) -> Unit,
     onManageCategories: () -> Unit,
     getWordCount: (String) -> Int = { 0 },
-    errorMessage: String? = null
+    errorMessage: String? = null,
+    savedConfig: GameConfig? = null,
+    hasSavedState: Boolean = false
 ) {
-    var players by remember { mutableStateOf(6) }
-    var impostors by remember { mutableStateOf(1) }
-    var selectedCategories by remember { mutableStateOf(setOf<String>()) }
+
+    // Inicializar con valores de la config guardada si existe
+
+    var players by remember(savedConfig) {
+        mutableStateOf(savedConfig?.players ?: 6)
+    }
+
+    var impostors by remember(savedConfig) {
+        mutableStateOf(savedConfig?.impostors ?: 1)
+    }
+    var selectedCategories by remember(savedConfig) {
+        mutableStateOf(
+            when (val mode = savedConfig?.categoryMode) {
+                is CategoryMode.Single -> setOf(mode.category)
+                is CategoryMode.Multiple -> mode.categories
+                else -> setOf<String>()
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -44,6 +64,36 @@ fun LobbyScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+
+            if(hasSavedState) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                "Juego en progreso",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                "Se continuará desde donde se dejó",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+
 
             // Mostrar errores
             if (errorMessage != null) {

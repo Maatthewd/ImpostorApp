@@ -11,7 +11,6 @@ import com.matthew.impostorapp.data.repository.GameRepository
 import com.matthew.impostorapp.domain.model.GameState
 import com.matthew.impostorapp.ui.screen.*
 import com.matthew.impostorapp.viewmodel.GameViewModel
-import com.matthew.impostorapp.viewmodel.UiState
 import com.matthew.impostorapp.ui.theme.ImpostorAppTheme
 import com.matthew.impostorapp.viewmodel.GameViewModelFactory
 import androidx.compose.foundation.layout.*
@@ -32,7 +31,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Inicializar BD en background thread
         val db = DatabaseProvider.getDatabase(this)
         val repository = GameRepository(
             db.categoryDao(),
@@ -44,7 +42,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             val viewModel: GameViewModel = viewModel(factory = factory)
 
-            // Observar estados reactivos
             val game by viewModel.game
             val categories by viewModel.categories.collectAsState()
             val wordCounts by viewModel.wordCounts.collectAsState()
@@ -54,7 +51,6 @@ class MainActivity : ComponentActivity() {
             var currentScreen by remember { mutableStateOf<Screen>(Screen.Lobby) }
 
             ImpostorAppTheme {
-                // La UI reacciona automáticamente cuando los datos están listos
                 MainContent(
                     viewModel = viewModel,
                     game = game,
@@ -96,7 +92,9 @@ fun MainContent(
                         getWordCount = { category ->
                             wordCounts[category] ?: 0
                         },
-                        errorMessage = managementError
+                        errorMessage = managementError,
+                        savedConfig = viewModel.getSavedConfig(),
+                        hasSavedState = viewModel.hasSavedState()
                     )
                 }
 
@@ -112,7 +110,9 @@ fun MainContent(
                             getWordCount = { category ->
                                 wordCounts[category] ?: 0
                             },
-                            errorMessage = managementError
+                            errorMessage = managementError,
+                            savedConfig = viewModel.getSavedConfig(),
+                            hasSavedState = viewModel.hasSavedState()
                         )
                     }
 
@@ -133,9 +133,11 @@ fun MainContent(
 
                     GameState.ROUND_END -> {
                         RoundEndScreen(
+                            currentRound = viewModel.getCurrentRound(),
+                            totalRounds = viewModel.getTotalRounds(),
                             onNextRound = { viewModel.nextRound() },
                             onConfig = {
-                                viewModel.resetGame()
+                                viewModel.goToConfig()
                                 onScreenChange(Screen.Lobby)
                             },
                             onEndGame = { viewModel.endGame() }
@@ -153,7 +155,9 @@ fun MainContent(
                             getWordCount = { category ->
                                 wordCounts[category] ?: 0
                             },
-                            errorMessage = managementError
+                            errorMessage = managementError,
+                            savedConfig = viewModel.getSavedConfig(),
+                            hasSavedState = viewModel.hasSavedState()
                         )
                     }
 
