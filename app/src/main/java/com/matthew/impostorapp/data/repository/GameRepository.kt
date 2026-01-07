@@ -6,6 +6,7 @@ import com.matthew.impostorapp.data.local.dao.WordDao
 import com.matthew.impostorapp.data.local.entity.CategoryEntity
 import com.matthew.impostorapp.data.local.entity.WordEntity
 import com.matthew.impostorapp.domain.model.Word
+import com.matthew.impostorapp.utils.StringSimilarity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -16,6 +17,14 @@ class GameRepository(
     private val categoryDao: CategoryDao,
     private val wordDao: WordDao
 ) {
+
+    companion object {
+        /**
+         * Umbral de similitud para detectar nombres parecidos.
+         * 0.X significa X% de similitud.
+         */
+        private const val SIMILARITY_THRESHOLD = 0.70
+    }
 
     // ===== OBSERVABLES CON FLOW =====
 
@@ -89,19 +98,46 @@ class GameRepository(
 
     suspend fun addCategory(name: String): Result<Unit> {
         return try {
-            val normalized = name.trim()
+            val trimmed = name.trim()
 
-            if (normalized.isEmpty()) {
+            if (trimmed.isEmpty()) {
                 return Result.failure(Exception("El nombre no puede estar vacío"))
             }
 
-            val existing = categoryDao.getByName(normalized)
-            if (existing != null) {
-                Result.failure(Exception("La categoría ya existe"))
-            } else {
-                categoryDao.insert(CategoryEntity(name = normalized))
-                Result.success(Unit)
+            // Obtener todas las categorías existentes
+            val allCategories = categoryDao.getAll()
+            val existingNames = allCategories.map { it.name }
+
+            // Buscar categorías similares (tanto iguales como con errores tipográficos)
+            val similarCategories = StringSimilarity.findSimilar(
+                target = trimmed,
+                candidates = existingNames,
+                threshold = SIMILARITY_THRESHOLD
+            )
+
+            if (similarCategories.isNotEmpty()) {
+                val similar = similarCategories.first()
+
+                // Calcular la similitud exacta para el mensaje
+                val similarityScore = StringSimilarity.similarity(
+                    StringSimilarity.normalizeText(trimmed),
+                    StringSimilarity.normalizeText(similar)
+                )
+
+                val message = when {
+                    similarityScore >= 0.95 ->
+                        "Ya existe la categoría: '$similar'"
+                    else ->
+                        "Ya existe una categoría similar: '$similar'\n¿Quisiste decir esa?"
+                }
+
+                return Result.failure(Exception(message))
             }
+
+            // Si no hay similares, agregar la nueva categoría
+            categoryDao.insert(CategoryEntity(name = trimmed))
+            Result.success(Unit)
+
         } catch (e: Exception) {
             Result.failure(e)
         }

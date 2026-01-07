@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 /**
  * Proveedor singleton de la base de datos con inicialización asíncrona.
  *
- * Enfoque profesional sin bloqueos:
+ *
  * - La BD se crea inmediatamente
  * - El seed corre en background
  * - El ViewModel usa Flow para reaccionar cuando los datos estén listos

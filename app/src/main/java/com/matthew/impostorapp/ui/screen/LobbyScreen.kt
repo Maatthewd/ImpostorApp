@@ -1,6 +1,8 @@
 package com.matthew.impostorapp.ui.screen
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -98,7 +100,11 @@ fun LobbyScreen(
             }
 
             // ===== CATEGORÍAS =====
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Categorías", style = MaterialTheme.typography.titleMedium)
 
@@ -110,35 +116,42 @@ fun LobbyScreen(
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     } else {
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 8.dp)
-                        ) {
-                            categories.forEach { category ->
-                                val wordCount = getWordCount(category)
 
-                                FilterChip(
-                                    selected = category in selectedCategories,
-                                    onClick = {
-                                        selectedCategories =
-                                            if (category in selectedCategories)
-                                                selectedCategories - category
-                                            else
-                                                selectedCategories + category
-                                    },
-                                    // NUEVO: Mostrar contador
-                                    label = { Text("$category ($wordCount)") },
-                                    // NUEVO: Deshabilitar si no tiene palabras
-                                    enabled = wordCount > 0
-                                )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.verticalScroll(rememberScrollState())
+                            ) {
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    categories.forEach { category ->
+                                        val wordCount = getWordCount(category)
+
+                                        FilterChip(
+                                            selected = category in selectedCategories,
+                                            onClick = {
+                                                selectedCategories =
+                                                    if (category in selectedCategories)
+                                                        selectedCategories - category
+                                                    else
+                                                        selectedCategories + category
+                                            },
+                                            label = { Text("$category ($wordCount)") },
+                                            enabled = wordCount > 0
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.weight(1f))
 
             // ===== START =====
             Button(

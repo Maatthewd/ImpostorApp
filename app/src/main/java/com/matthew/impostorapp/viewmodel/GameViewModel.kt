@@ -12,13 +12,13 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel profesional con manejo de estados reactivo usando Flow.
+ * ViewModel con manejo de estados reactivo usando Flow.
  *
- * Ventajas de este enfoque:
+ *
  * - Los datos se actualizan automáticamente cuando cambia la BD
  * - No hay race conditions con el seed inicial
  * - Separación clara entre estado de UI y estado de datos
- * - Más fácil de testear
+ * - Fácil de testear
  */
 class GameViewModel(
     private val repository: GameRepository
@@ -239,6 +239,7 @@ class GameViewModel(
             )
         }
     }
+
 
     fun deleteCategory(name: String, force: Boolean) {
         viewModelScope.launch {
